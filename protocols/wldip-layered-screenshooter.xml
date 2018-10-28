@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="wldip_layered_screenshooter">
+
+  <interface name="wldip_layered_screenshooter" version="1">
+    <request name="shoot" />
+    <event name="done">
+      <arg name="contents" type="array" summary="wlscrn format file contents"/>
+    </event>
+  </interface>
+
+</protocol>

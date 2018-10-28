@@ -1,0 +1,30 @@
+namespace wldip.layered_screenshot;
+
+file_extension "wlscrn";
+file_identifier "WLSC";
+
+enum Layout : ubyte {
+	A8B8G8R8 = 1,
+}
+
+table Surface {
+	x: uint32 = 0;
+	y: uint32 = 0;
+	width: uint32 = 0;
+	height: uint32 = 0;
+	layout: Layout = A8B8G8R8;
+	contents: [ubyte] (required);
+}
+
+table Layer {
+	surfaces: [Surface] (required);
+	order: uint32 = 0;
+}
+
+table Screenshot {
+	width: uint32 = 0;
+	height: uint32 = 0;
+	layers: [Layer] (required);
+}
+
+root_type Screenshot;
