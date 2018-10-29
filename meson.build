@@ -33,6 +33,7 @@ inc_flatbuffers = include_directories('/usr/local/include', '/usr/include')
 weston = dependency('libweston-5')
 wayland_server = dependency('wayland-server')
 wayland_client = dependency('wayland-client')
+webp = dependency('libwebp')
 
 layered_screenshot = shared_library('layered-screenshot',
 	'layered-screenshot.cpp', layered_screenshot_fb, layered_screenshot_code, layered_screenshot_server_header,
@@ -47,5 +48,5 @@ layered_screenshot = shared_library('layered-screenshot',
 layered_screenshooter = executable('layered-screenshooter',
 	'layered-screenshooter.cpp', layered_screenshot_fb, layered_screenshot_code, layered_screenshot_client_header,
 	include_directories: [inc_flatbuffers],
-	dependencies: [wayland_client, lib_flatbuffers],
+	dependencies: [wayland_client, lib_flatbuffers, webp],
 	install: true)

@@ -4,7 +4,7 @@ file_extension "wlscrn";
 file_identifier "WLSC";
 
 enum Layout : ubyte {
-	A8B8G8R8 = 1,
+	Pixman_A8B8G8R8 = 1, // big endian, i.e. RGBA in LE
 }
 
 table Surface {
@@ -12,7 +12,7 @@ table Surface {
 	y: uint32 = 0;
 	width: uint32 = 0;
 	height: uint32 = 0;
-	layout: Layout = A8B8G8R8;
+	layout: Layout = Pixman_A8B8G8R8;
 	contents: [ubyte] (required);
 }
 

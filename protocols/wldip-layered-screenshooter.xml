@@ -4,7 +4,7 @@
   <interface name="wldip_layered_screenshooter" version="1">
     <request name="shoot" />
     <event name="done">
-      <arg name="contents" type="array" summary="wlscrn format file contents"/>
+      <arg name="shot" type="fd" summary="descriptor to a wlscrn format file"/>
     </event>
   </interface>
 
