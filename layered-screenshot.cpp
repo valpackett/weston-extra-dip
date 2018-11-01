@@ -52,6 +52,7 @@ static void shoot(struct wl_client *client, struct wl_resource *resource) {
 	int fd = shm_open(SHM_ANON, O_RDWR | O_CREAT, 0644);
 	ftruncate(fd, builder.GetSize());
 	write(fd, builder.GetBufferPointer(), builder.GetSize());
+	lseek(fd, 0, SEEK_SET);
 	wldip_layered_screenshooter_send_done(resource, fd);
 	close(fd);
 }

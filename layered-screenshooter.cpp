@@ -30,7 +30,6 @@ static bool received = false;
 static void on_done(void *data, struct wldip_layered_screenshooter *shooter, int recv_fd) {
 	using namespace wldip::layered_screenshot;
 	received = true;
-	//lseek(recv_fd, 0, SEEK_SET);
 	struct stat recv_stat;
 	fstat(recv_fd, &recv_stat);
 	void *fbuf = mmap(nullptr, recv_stat.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, recv_fd, 0);
