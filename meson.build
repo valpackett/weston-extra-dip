@@ -35,6 +35,16 @@ wayland_server = dependency('wayland-server')
 wayland_client = dependency('wayland-client')
 webp = dependency('libwebp')
 
+
+key_modifier_binds = shared_library('key-modifier-binds',
+	'key-modifier-binds.cpp',
+	dependencies: [weston, wayland_server],
+	cpp_args: ['-fno-rtti', '-fno-exceptions'],
+	version: '1',
+	name_prefix: '',
+	install_dir: 'lib/weston',
+	install: true)
+
 layered_screenshot = shared_library('layered-screenshot',
 	'layered-screenshot.cpp', layered_screenshot_fb, layered_screenshot_code, layered_screenshot_server_header,
 	include_directories: [inc_flatbuffers],
