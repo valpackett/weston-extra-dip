@@ -19,6 +19,10 @@ layered_screenshot_code = wl_code.process('protocols/wldip-layered-screenshooter
 layered_screenshot_server_header = wl_server_header.process('protocols/wldip-layered-screenshooter.xml')
 layered_screenshot_client_header = wl_client_header.process('protocols/wldip-layered-screenshooter.xml')
 
+gamma_control_code = wl_code.process('protocols/wlr-gamma-control-unstable-v1.xml')
+gamma_control_server_header = wl_server_header.process('protocols/wlr-gamma-control-unstable-v1.xml')
+gamma_control_client_header = wl_client_header.process('protocols/wlr-gamma-control-unstable-v1.xml')
+
 prog_flatc = find_program('flatc')
 flatc = generator(prog_flatc,
 	output: '@BASENAME@_generated.h',
@@ -38,6 +42,15 @@ webp = dependency('libwebp')
 
 key_modifier_binds = shared_library('key-modifier-binds',
 	'key-modifier-binds.cpp',
+	dependencies: [weston, wayland_server],
+	cpp_args: ['-fno-rtti', '-fno-exceptions'],
+	version: '1',
+	name_prefix: '',
+	install_dir: 'lib/weston',
+	install: true)
+
+gamma_control = shared_library('gamma-control',
+	'gamma-control.cpp', gamma_control_code, gamma_control_server_header,
 	dependencies: [weston, wayland_server],
 	cpp_args: ['-fno-rtti', '-fno-exceptions'],
 	version: '1',
