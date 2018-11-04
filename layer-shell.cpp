@@ -57,6 +57,11 @@ struct lsh_context {
 		surface->committed = committed_callback;
 		resource = wl_resource_create(client, &zwlr_layer_surface_v1_interface, 1, id);
 		wl_resource_set_implementation(resource, &lsh_impl, this, lsh_destructor);
+		if (!weston_view_is_mapped(view)) {
+			// the client could commit everything before this constructor ends,
+			// so the committed callback wouldn't be called. force a reconfig here
+			zwlr_layer_surface_v1_send_configure(resource, 0, 1, 1);
+		}
 	}
 
 	coords position(coords surface_size, coords output_size) {
@@ -111,6 +116,7 @@ struct lsh_context {
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
 	auto *ctx = reinterpret_cast<struct lsh_context*>(surface->committed_private);
+	weston_log("Map %b\n", weston_view_is_mapped(ctx->view));
 	if (!weston_view_is_mapped(ctx->view)) {
 		switch (ctx->layer) {
 			break; case ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND:
