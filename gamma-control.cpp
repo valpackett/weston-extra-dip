@@ -56,6 +56,7 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 	ssize_t n_read = read(fd, reinterpret_cast<void*>(table), bytesize);
 	close(fd);
 	if (n_read == -1 || (size_t)(n_read) != bytesize) {
+		weston_log("gamma control: read fail: read %zd, bytesize %zu\n", n_read, bytesize);
 		delete[] table;
 		zwlr_gamma_control_v1_send_failed(ctx->resource);
 		delete ctx;
@@ -84,6 +85,7 @@ static void get_gamma_control(struct wl_client *client, struct wl_resource *reso
 	auto *ctx = new gamma_context(head, client, id);
 
 	if (!ctx->head->output->set_gamma) {
+		weston_log("gamma control: no set_gamma function\n");
 		zwlr_gamma_control_v1_send_failed(ctx->resource);
 		delete ctx;
 		return;
