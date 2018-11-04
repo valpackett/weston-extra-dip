@@ -23,6 +23,14 @@ gamma_control_code = wl_code.process('protocols/wlr-gamma-control-unstable-v1.xm
 gamma_control_server_header = wl_server_header.process('protocols/wlr-gamma-control-unstable-v1.xml')
 gamma_control_client_header = wl_client_header.process('protocols/wlr-gamma-control-unstable-v1.xml')
 
+layer_shell_code = wl_code.process('protocols/wlr-layer-shell-unstable-v1.xml')
+layer_shell_server_header = wl_server_header.process('protocols/wlr-layer-shell-unstable-v1.xml')
+layer_shell_client_header = wl_client_header.process('protocols/wlr-layer-shell-unstable-v1.xml')
+
+xdg_shell_code = wl_code.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
+xdg_shell_server_header = wl_server_header.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
+xdg_shell_client_header = wl_client_header.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
+
 prog_flatc = find_program('flatc')
 flatc = generator(prog_flatc,
 	output: '@BASENAME@_generated.h',
@@ -51,6 +59,15 @@ key_modifier_binds = shared_library('key-modifier-binds',
 
 gamma_control = shared_library('gamma-control',
 	'gamma-control.cpp', gamma_control_code, gamma_control_server_header,
+	dependencies: [weston, wayland_server],
+	cpp_args: ['-fno-rtti', '-fno-exceptions'],
+	version: '1',
+	name_prefix: '',
+	install_dir: 'lib/weston',
+	install: true)
+
+layer_shell = shared_library('layer-shell',
+	'layer-shell.cpp', layer_shell_code, layer_shell_server_header, xdg_shell_code,
 	dependencies: [weston, wayland_server],
 	cpp_args: ['-fno-rtti', '-fno-exceptions'],
 	version: '1',
