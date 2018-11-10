@@ -4,10 +4,10 @@
 #include <utility>
 #include "wlr-layer-shell-unstable-v1-server-protocol.h"
 
-struct weston_layer lr_background = {0};
-struct weston_layer lr_bottom = {0};
-struct weston_layer lr_top = {0};
-struct weston_layer lr_overlay = {0};
+struct weston_layer lr_background = {nullptr};
+struct weston_layer lr_bottom = {nullptr};
+struct weston_layer lr_top = {nullptr};
+struct weston_layer lr_overlay = {nullptr};
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy);
 
@@ -56,7 +56,7 @@ struct lsh_context {
 	            struct wl_client *client, uint32_t id)
 	    : surface(s), head(h), layer(l) {
 		view = weston_view_create(surface);
-		if (head) {
+		if (head != nullptr) {
 			weston_view_set_output(view, weston_head_get_output(head));
 			// TODO subscribe to destruction
 		}
@@ -75,18 +75,20 @@ struct lsh_context {
 		int32_t w, h, ow, oh, x = 0, y = 0;
 		std::tie(w, h) = surface_size;
 		std::tie(ow, oh) = output_size;
-		if ((anchor & (t | b)) == (t | b) || !((anchor & t) || (anchor & b))) {  // both or neither
+		if ((anchor & (t | b)) == (t | b) ||
+		    !(((anchor & t) != 0) || ((anchor & b) != 0))) {  // both or neither
 			y = oh / 2 - h / 2 + margin.top / 2 - margin.bottom / 2;
-		} else if (anchor & b) {
+		} else if ((anchor & b) != 0) {
 			y = oh - h - margin.bottom;
-		} else if (anchor & t) {
+		} else if ((anchor & t) != 0) {
 			y = margin.top;
 		}
-		if ((anchor & (l | r)) == (l | r) || !((anchor & l) || (anchor & r))) {  // both or neither
+		if ((anchor & (l | r)) == (l | r) ||
+		    !(((anchor & l) != 0) || ((anchor & r) != 0))) {  // both or neither
 			x = ow / 2 - w / 2 + margin.left / 2 - margin.right / 2;
-		} else if (anchor & r) {
+		} else if ((anchor & r) != 0) {
 			x = ow - w - margin.right;
-		} else if (anchor & l) {
+		} else if ((anchor & l) != 0) {
 			x = margin.left;
 		}
 		return std::make_pair(x, y);
@@ -123,7 +125,7 @@ struct lsh_context {
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
 	auto *ctx = reinterpret_cast<struct lsh_context *>(surface->committed_private);
-	weston_log("Map %b\n", weston_view_is_mapped(ctx->view));
+	weston_log("Map %b\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
 	if (!weston_view_is_mapped(ctx->view)) {
 		switch (ctx->layer) {
 			break;
@@ -142,7 +144,7 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 		ctx->view->is_mapped = true;
 	}
 	weston_view_update_transform(ctx->view);  // assigns an output if there was none
-	if (ctx->view->output) {
+	if (ctx->view->output != nullptr) {
 		auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
 		int sw, sh;
 		weston_surface_get_content_size(surface, &sw, &sh);
@@ -199,7 +201,7 @@ static void destroy_lsh(struct wl_client *client, struct wl_resource *resource) 
 
 static void lsh_destructor(struct wl_resource *resource) {
 	auto *ctx = reinterpret_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
-	if (!ctx) {
+	if (ctx == nullptr) {
 		return;
 	}
 	delete ctx;
@@ -221,7 +223,7 @@ static void get_layer_surface(struct wl_client *client, struct wl_resource *reso
 		return;
 	}
 
-	auto *head = res_output
+	auto *head = res_output != nullptr
 	                 ? reinterpret_cast<struct weston_head *>(wl_resource_get_user_data(res_output))
 	                 : nullptr;
 

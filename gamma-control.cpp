@@ -25,7 +25,7 @@ struct gamma_context {
 
 static void set_gamma(struct wl_client *client, struct wl_resource *resource, int32_t fd) {
 	auto *ctx = reinterpret_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
-	if (!ctx) {
+	if (ctx == nullptr) {
 		close(fd);
 		return;
 	}
@@ -34,7 +34,7 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 	size_t elems = ramp_size * 3;
 	size_t bytesize = elems * sizeof(uint16_t);
 
-	struct stat recv_stat;
+	struct stat recv_stat {};
 	fstat(fd, &recv_stat);
 	if (recv_stat.st_size != bytesize) {
 		close(fd);
@@ -44,8 +44,8 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 	}
 	lseek(fd, 0, SEEK_SET);
 
-	uint16_t *table = new uint16_t[elems];
-	if (!table) {
+	auto *table = new uint16_t[elems];
+	if (table == nullptr) {
 		close(fd);
 		wl_resource_post_no_memory(ctx->resource);
 		return;
@@ -67,7 +67,7 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 
 static void control_destructor(struct wl_resource *resource) {
 	auto *ctx = reinterpret_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
-	if (!ctx) {
+	if (ctx == nullptr) {
 		return;
 	}
 	delete ctx;
@@ -82,7 +82,7 @@ static void get_gamma_control(struct wl_client *client, struct wl_resource *reso
 	auto *head = reinterpret_cast<struct weston_head *>(wl_resource_get_user_data(output));
 	auto *ctx = new gamma_context(head, client, id);
 
-	if (!ctx->head->output->set_gamma) {
+	if (ctx->head->output->set_gamma == nullptr) {
 		weston_log("gamma control: no set_gamma function\n");
 		zwlr_gamma_control_v1_send_failed(ctx->resource);
 		delete ctx;

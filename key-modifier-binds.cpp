@@ -36,7 +36,7 @@ struct keymod_binding_grab {
 
 static void keymod_binding_key(struct weston_keyboard_grab *grab, const struct timespec *time,
                                uint32_t key, uint32_t state) {
-	struct keymod_binding_grab *kg = reinterpret_cast<struct keymod_binding_grab *>(grab);
+	auto *kg = reinterpret_cast<struct keymod_binding_grab *>(grab);
 	struct weston_compositor *compositor = kg->seat->compositor;
 	struct wl_display *display = compositor->wl_display;
 
@@ -45,18 +45,17 @@ static void keymod_binding_key(struct weston_keyboard_grab *grab, const struct t
 			memcpy(&kg->press_time, time, sizeof(struct timespec));
 			// keep grab
 			return;
-		} else {
-			// only do the press if it was held for a short time
-			struct timespec diff;
-			timespec_sub(&diff, time, &kg->press_time);
-			if (timespec_to_msec(&diff) < 400) {
-				struct wl_resource *resource;
-				wl_resource_for_each(resource, &grab->keyboard->focus_resource_list) {
-					wl_keyboard_send_key(resource, wl_display_next_serial(display), timespec_to_msec(time),
-					                     kg->emit_key, WL_KEYBOARD_KEY_STATE_PRESSED);
-					wl_keyboard_send_key(resource, wl_display_next_serial(display), timespec_to_msec(time),
-					                     kg->emit_key, WL_KEYBOARD_KEY_STATE_RELEASED);
-				}
+		}
+		// only do the press if it was held for a short time
+		struct timespec diff {};
+		timespec_sub(&diff, time, &kg->press_time);
+		if (timespec_to_msec(&diff) < 400) {
+			struct wl_resource *resource;
+			wl_resource_for_each(resource, &grab->keyboard->focus_resource_list) {
+				wl_keyboard_send_key(resource, wl_display_next_serial(display), timespec_to_msec(time),
+				                     kg->emit_key, WL_KEYBOARD_KEY_STATE_PRESSED);
+				wl_keyboard_send_key(resource, wl_display_next_serial(display), timespec_to_msec(time),
+				                     kg->emit_key, WL_KEYBOARD_KEY_STATE_RELEASED);
 			}
 		}
 	}
@@ -71,7 +70,7 @@ static void keymod_binding_key(struct weston_keyboard_grab *grab, const struct t
 	}
 
 	weston_keyboard_end_grab(grab->keyboard);
-	if (grab->keyboard->input_method_resource) {
+	if (grab->keyboard->input_method_resource != nullptr) {
 		grab->keyboard->grab = &grab->keyboard->input_method_grab;
 	}
 	delete kg;
@@ -89,7 +88,7 @@ static void keymod_binding_modifiers(struct weston_keyboard_grab *grab, uint32_t
 }
 
 static void keymod_binding_cancel(struct weston_keyboard_grab *grab) {
-	struct keymod_binding_grab *kg = reinterpret_cast<struct keymod_binding_grab *>(grab);
+	auto *kg = reinterpret_cast<struct keymod_binding_grab *>(grab);
 	weston_keyboard_end_grab(grab->keyboard);
 	delete kg;
 }
@@ -102,7 +101,7 @@ struct weston_keyboard_grab_interface keymod_binding_keyboard_grab = {
 
 static void start_keymod_grab(struct weston_keyboard *keyboard, const struct timespec *time,
                               uint32_t key, void *data) {
-	struct keymod_binding_grab *grab = new keymod_binding_grab;
+	auto *grab = new keymod_binding_grab;
 	grab->seat = keyboard->seat;
 	grab->this_key = key;
 	grab->emit_key = reinterpret_cast<intptr_t>(data);

@@ -28,7 +28,7 @@ static bool received = false;
 static void on_done(void *data, struct wldip_layered_screenshooter *shooter, int recv_fd) {
 	using namespace wldip::layered_screenshot;
 	received = true;
-	struct stat recv_stat;
+	struct stat recv_stat {};
 	fstat(recv_fd, &recv_stat);
 	void *fbuf = mmap(nullptr, recv_stat.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, recv_fd, 0);
 	auto fshot = GetScreenshot(fbuf);
@@ -36,7 +36,7 @@ static void on_done(void *data, struct wldip_layered_screenshooter *shooter, int
 	for (const auto *layer : *fshot->layers()) {
 		std::cout << "Layer" << std::endl;
 		for (const auto *surface : *layer->surfaces()) {
-			uint8_t *buf = const_cast<uint8_t *>(surface->contents()->Data());
+			auto *buf = const_cast<uint8_t *>(surface->contents()->Data());
 			// NOTE: pixman big-endian bgra == little endian rgba, don't touch
 			std::cout << "Surface " << counter << " w=" << surface->width() << " h=" << surface->height()
 			          << " x=" << surface->x() << " y=" << surface->y() << " buf " << buf[0] << buf[1]
