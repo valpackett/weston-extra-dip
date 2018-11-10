@@ -1,29 +1,27 @@
-#include <iostream>
-#include <fstream>
-#include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <sys/mman.h>
-#include <webp/encode.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <wayland-client.h>
-#include "wldip-layered-screenshooter-client-protocol.h"
+#include <webp/encode.h>
+#include <fstream>
+#include <iostream>
 #include "Screenshot_generated.h"
+#include "wldip-layered-screenshooter-client-protocol.h"
 
 static struct wldip_layered_screenshooter *shooter;
 
-static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
+static void handle_global(void *data, struct wl_registry *registry, uint32_t name,
+                          const char *interface, uint32_t version) {
 	if (strcmp(interface, "wldip_layered_screenshooter") == 0) {
-		shooter = reinterpret_cast<struct wldip_layered_screenshooter*>(
-				wl_registry_bind(registry, name, &wldip_layered_screenshooter_interface, 1));
+		shooter = reinterpret_cast<struct wldip_layered_screenshooter *>(
+		    wl_registry_bind(registry, name, &wldip_layered_screenshooter_interface, 1));
 	}
 }
 
-static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) { }
+static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) {}
 
-static const struct wl_registry_listener registry_listener = {
-	handle_global,
-	handle_global_remove
-};
+static const struct wl_registry_listener registry_listener = {handle_global, handle_global_remove};
 
 static bool received = false;
 
@@ -38,24 +36,24 @@ static void on_done(void *data, struct wldip_layered_screenshooter *shooter, int
 	for (const auto *layer : *fshot->layers()) {
 		std::cout << "Layer" << std::endl;
 		for (const auto *surface : *layer->surfaces()) {
-			uint8_t *buf = const_cast<uint8_t*>(surface->contents()->Data());
+			uint8_t *buf = const_cast<uint8_t *>(surface->contents()->Data());
 			// NOTE: pixman big-endian bgra == little endian rgba, don't touch
 			std::cout << "Surface " << counter << " w=" << surface->width() << " h=" << surface->height()
-				<< " x=" << surface->x() << " y=" << surface->y()
-				<< " buf " << buf[0] << buf[1] << buf[2] << buf[3]
-				<< std::endl;
+			          << " x=" << surface->x() << " y=" << surface->y() << " buf " << buf[0] << buf[1]
+			          << buf[2] << buf[3] << std::endl;
 			uint8_t *webpbuf = nullptr;
-			size_t webpsiz = WebPEncodeRGBA(buf, surface->width(), surface->height(), surface->width() * 4, 98, &webpbuf);
+			size_t webpsiz = WebPEncodeRGBA(buf, surface->width(), surface->height(),
+			                                surface->width() * 4, 98, &webpbuf);
 			char *fname = nullptr;
 			asprintf(&fname, "surface-%d.webp", counter++);
 			std::ofstream ofs(fname, std::ofstream::binary);
-			ofs.write(reinterpret_cast<char*>(webpbuf), webpsiz);
+			ofs.write(reinterpret_cast<char *>(webpbuf), webpsiz);
 		}
 	}
 	close(recv_fd);
 }
 
-static const struct wldip_layered_screenshooter_listener shooter_listener = { on_done };
+static const struct wldip_layered_screenshooter_listener shooter_listener = {on_done};
 
 int main(int argc, char *argv[]) {
 	struct wl_display *display = wl_display_connect(nullptr);
