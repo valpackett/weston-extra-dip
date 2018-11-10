@@ -36,7 +36,7 @@ const auto r = ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
 const auto b = ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
 const auto l = ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
 
-typedef std::pair<int32_t, int32_t> coords;
+using coords = std::pair<int32_t, int32_t>;
 
 struct lsh_margin {
 	int32_t top, right, bottom, left;
@@ -124,7 +124,7 @@ struct lsh_context {
 };
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
-	auto *ctx = reinterpret_cast<struct lsh_context *>(surface->committed_private);
+	auto *ctx = static_cast<struct lsh_context *>(surface->committed_private);
 	weston_log("Map %b\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
 	if (!weston_view_is_mapped(ctx->view)) {
 		switch (ctx->layer) {
@@ -164,7 +164,7 @@ static void set_size(struct wl_client *client, struct wl_resource *resource, uin
                      uint32_t height) {}
 
 static void set_anchor(struct wl_client *client, struct wl_resource *resource, uint32_t anchor) {
-	auto *ctx = reinterpret_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
 	ctx->anchor = static_cast<zwlr_layer_surface_v1_anchor>(anchor);
 }
 
@@ -175,7 +175,7 @@ static void set_exclusive_zone(struct wl_client *client, struct wl_resource *res
 
 static void set_margin(struct wl_client *client, struct wl_resource *resource, int32_t top,
                        int32_t right, int32_t bottom, int32_t left) {
-	auto *ctx = reinterpret_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
 	ctx->margin.top = top;
 	ctx->margin.right = right;
 	ctx->margin.bottom = bottom;
@@ -200,7 +200,7 @@ static void destroy_lsh(struct wl_client *client, struct wl_resource *resource) 
 }
 
 static void lsh_destructor(struct wl_resource *resource) {
-	auto *ctx = reinterpret_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
 	if (ctx == nullptr) {
 		return;
 	}
@@ -216,7 +216,7 @@ static void get_layer_surface(struct wl_client *client, struct wl_resource *reso
 		return;
 	}
 
-	auto *surface = reinterpret_cast<struct weston_surface *>(wl_resource_get_user_data(res_surface));
+	auto *surface = static_cast<struct weston_surface *>(wl_resource_get_user_data(res_surface));
 
 	if (weston_surface_set_role(surface, "layer-shell", resource, ZWLR_LAYER_SHELL_V1_ERROR_ROLE) <
 	    0) {
@@ -224,7 +224,7 @@ static void get_layer_surface(struct wl_client *client, struct wl_resource *reso
 	}
 
 	auto *head = res_output != nullptr
-	                 ? reinterpret_cast<struct weston_head *>(wl_resource_get_user_data(res_output))
+	                 ? static_cast<struct weston_head *>(wl_resource_get_user_data(res_output))
 	                 : nullptr;
 
 	new lsh_context(surface, head, static_cast<zwlr_layer_shell_v1_layer>(layer), client, id);

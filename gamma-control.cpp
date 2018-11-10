@@ -1,6 +1,7 @@
 #include <compositor.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
 #include "wlr-gamma-control-unstable-v1-server-protocol.h"
 
 static void set_gamma(struct wl_client *client, struct wl_resource *resource, int32_t fd);
@@ -24,7 +25,7 @@ struct gamma_context {
 };
 
 static void set_gamma(struct wl_client *client, struct wl_resource *resource, int32_t fd) {
-	auto *ctx = reinterpret_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
 	if (ctx == nullptr) {
 		close(fd);
 		return;
@@ -32,7 +33,7 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 
 	auto ramp_size = ctx->head->output->gamma_size;
 	size_t elems = ramp_size * 3;
-	size_t bytesize = elems * sizeof(uint16_t);
+	off_t bytesize = elems * sizeof(uint16_t);
 
 	struct stat recv_stat {};
 	fstat(fd, &recv_stat);
@@ -44,29 +45,24 @@ static void set_gamma(struct wl_client *client, struct wl_resource *resource, in
 	}
 	lseek(fd, 0, SEEK_SET);
 
-	auto *table = new uint16_t[elems];
-	if (table == nullptr) {
-		close(fd);
-		wl_resource_post_no_memory(ctx->resource);
-		return;
-	}
+	std::vector<uint16_t> table;
+	table.resize(elems);
 
-	ssize_t n_read = read(fd, reinterpret_cast<void *>(table), bytesize);
+	ssize_t n_read = read(fd, reinterpret_cast<void *>(table.data()), bytesize);
 	close(fd);
-	if (n_read == -1 || (size_t)(n_read) != bytesize) {
+	if (n_read == -1 || n_read != bytesize) {
 		weston_log("gamma control: read fail: read %zd, bytesize %zu\n", n_read, bytesize);
-		delete[] table;
 		zwlr_gamma_control_v1_send_failed(ctx->resource);
 		delete ctx;
 		return;
 	}
 
-	ctx->head->output->set_gamma(ctx->head->output, ramp_size, table, table + ramp_size,
-	                             table + 2 * ramp_size);
+	ctx->head->output->set_gamma(ctx->head->output, ramp_size, table.data(), table.data() + ramp_size,
+	                             table.data() + 2 * ramp_size);
 }
 
 static void control_destructor(struct wl_resource *resource) {
-	auto *ctx = reinterpret_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct gamma_context *>(wl_resource_get_user_data(resource));
 	if (ctx == nullptr) {
 		return;
 	}
@@ -79,7 +75,7 @@ static void destroy_control(struct wl_client *client, struct wl_resource *resour
 
 static void get_gamma_control(struct wl_client *client, struct wl_resource *resource, uint32_t id,
                               struct wl_resource *output) {
-	auto *head = reinterpret_cast<struct weston_head *>(wl_resource_get_user_data(output));
+	auto *head = static_cast<struct weston_head *>(wl_resource_get_user_data(output));
 	auto *ctx = new gamma_context(head, client, id);
 
 	if (ctx->head->output->set_gamma == nullptr) {

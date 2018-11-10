@@ -20,7 +20,7 @@ struct ls_context {
 
 static void shoot(struct wl_client *client, struct wl_resource *resource) {
 	using namespace wldip::layered_screenshot;
-	auto *ctx = reinterpret_cast<struct ls_context *>(wl_resource_get_user_data(resource));
+	auto *ctx = static_cast<struct ls_context *>(wl_resource_get_user_data(resource));
 	std::unordered_map<struct weston_layer *, std::vector<struct weston_view *>> layers;
 	struct weston_view *view;
 	wl_list_for_each(view, &ctx->compositor->view_list, link) {
@@ -37,8 +37,8 @@ static void shoot(struct wl_client *client, struct wl_resource *resource) {
 			// size_t len = view->surface->width * view->surface->height * 4;
 			size_t len = cw * ch * 4;
 			auto contents = builder.CreateUninitializedVector<uint8_t>(len, &buf);
-			int ccr = weston_surface_copy_content(view->surface, reinterpret_cast<void *>(buf), len, 0, 0,
-			                                      cw, ch);
+			/* TODO int ccr = */
+			weston_surface_copy_content(view->surface, reinterpret_cast<void *>(buf), len, 0, 0, cw, ch);
 			fsurfs.push_back(CreateSurface(builder, view->geometry.x, view->geometry.y, cw, ch,
 			                               Layout_Pixman_A8B8G8R8, contents));
 		}
