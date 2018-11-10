@@ -1,7 +1,9 @@
-#include <compositor.h>
-#include <unistd.h>
 #include <tuple>
 #include <utility>
+
+extern "C" {
+#include <compositor.h>
+#include <unistd.h>
 #include "wlr-layer-shell-unstable-v1-server-protocol.h"
 
 struct weston_layer lr_background = {nullptr};
@@ -242,8 +244,7 @@ static void bind_shell(struct wl_client *client, void *data, uint32_t version, u
 	wl_resource_set_implementation(resource, &shell_impl, data, nullptr);
 }
 
-WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, int *argc,
-                                         char *argv[]) {
+WL_EXPORT int wet_module_init(struct weston_compositor *compositor, int *argc, char *argv[]) {
 	weston_layer_init(&lr_background, compositor);
 	weston_layer_set_position(&lr_background, WESTON_LAYER_POSITION_BACKGROUND);
 	weston_layer_init(&lr_bottom, compositor);
@@ -254,4 +255,5 @@ WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, i
 	weston_layer_set_position(&lr_overlay, WESTON_LAYER_POSITION_LOCK);
 	wl_global_create(compositor->wl_display, &zwlr_layer_shell_v1_interface, 1, nullptr, bind_shell);
 	return 0;
+}
 }

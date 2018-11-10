@@ -1,5 +1,7 @@
-#include <compositor.h>
 #include <cstring>
+
+extern "C" {
+#include <compositor.h>
 
 #define KEY_ESC 1
 #define KEY_LEFTSHIFT 42
@@ -109,8 +111,7 @@ static void start_keymod_grab(struct weston_keyboard *keyboard, const struct tim
 	weston_keyboard_start_grab(keyboard, &grab->grab);
 }
 
-WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, int *argc,
-                                         char *argv[]) {
+WL_EXPORT int wet_module_init(struct weston_compositor *compositor, int *argc, char *argv[]) {
 	// for now just hardcoded stuff here
 
 	auto nomod = (enum weston_keyboard_modifier)(0);
@@ -122,4 +123,5 @@ WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, i
 	                                  reinterpret_cast<void *>(KEY_KPRIGHTPAREN));
 
 	return 0;
+}
 }

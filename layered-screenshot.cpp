@@ -1,13 +1,15 @@
-#include <compositor.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 #include "Screenshot_generated.h"
+
+extern "C" {
+#include <compositor.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "wldip-layered-screenshooter-server-protocol.h"
 
 struct ls_context {
@@ -63,10 +65,10 @@ static void bind_shooter(struct wl_client *client, void *data, uint32_t version,
 	wl_resource_set_implementation(resource, &ls_impl, data, nullptr);
 }
 
-WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, int *argc,
-                                         char *argv[]) {
+WL_EXPORT int wet_module_init(struct weston_compositor *compositor, int *argc, char *argv[]) {
 	auto ctx = new ls_context(compositor);
 	wl_global_create(compositor->wl_display, &wldip_layered_screenshooter_interface, 1,
 	                 reinterpret_cast<void *>(ctx), bind_shooter);
 	return 0;
+}
 }

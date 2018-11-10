@@ -1,7 +1,9 @@
+#include <vector>
+
+extern "C" {
 #include <compositor.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <vector>
 #include "wlr-gamma-control-unstable-v1-server-protocol.h"
 
 static void set_gamma(struct wl_client *client, struct wl_resource *resource, int32_t fd);
@@ -103,9 +105,9 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
 	wl_resource_set_implementation(resource, &manager_impl, data, nullptr);
 }
 
-WL_EXPORT extern "C" int wet_module_init(struct weston_compositor *compositor, int *argc,
-                                         char *argv[]) {
+WL_EXPORT int wet_module_init(struct weston_compositor *compositor, int *argc, char *argv[]) {
 	wl_global_create(compositor->wl_display, &zwlr_gamma_control_manager_v1_interface, 1, nullptr,
 	                 bind_manager);
 	return 0;
+}
 }
