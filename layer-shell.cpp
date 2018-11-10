@@ -161,7 +161,11 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 }
 
 static void set_size(struct wl_client *client, struct wl_resource *resource, uint32_t width,
-                     uint32_t height) {}
+                     uint32_t height) {
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	ctx->req_size.first = width;
+	ctx->req_size.second = height;
+}
 
 static void set_anchor(struct wl_client *client, struct wl_resource *resource, uint32_t anchor) {
 	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
