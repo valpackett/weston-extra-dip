@@ -42,8 +42,8 @@ static void on_done(void *data, struct wldip_layered_screenshooter *shooter, int
 			          << " x=" << surface->x() << " y=" << surface->y() << " buf " << buf[0] << buf[1]
 			          << buf[2] << buf[3] << std::endl;
 			uint8_t *webpbuf = nullptr;
-			size_t webpsiz = WebPEncodeRGBA(buf, surface->width(), surface->height(),
-			                                surface->width() * 4, 98, &webpbuf);
+			size_t webpsiz = WebPEncodeLosslessRGBA(buf, surface->width(), surface->height(),
+			                                        surface->width() * 4, &webpbuf);
 			char *fname = nullptr;
 			asprintf(&fname, "surface-%d.webp", counter++);
 			std::ofstream ofs(fname, std::ofstream::binary);
