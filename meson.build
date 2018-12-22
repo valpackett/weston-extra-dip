@@ -48,39 +48,35 @@ wayland_client = dependency('wayland-client')
 webp = dependency('libwebp')
 
 
-key_modifier_binds = shared_library('key-modifier-binds',
+key_modifier_binds = shared_module('key-modifier-binds',
 	'key-modifier-binds.cpp',
 	dependencies: [weston, wayland_server],
 	cpp_args: ['-fno-rtti', '-fno-exceptions'],
-	version: '1',
 	name_prefix: '',
 	install_dir: 'lib/weston',
 	install: true)
 
-gamma_control = shared_library('gamma-control',
+gamma_control = shared_module('gamma-control',
 	'gamma-control.cpp', gamma_control_code, gamma_control_server_header,
 	dependencies: [weston, wayland_server],
 	cpp_args: ['-fno-rtti', '-fno-exceptions'],
-	version: '1',
 	name_prefix: '',
 	install_dir: 'lib/weston',
 	install: true)
 
-layer_shell = shared_library('layer-shell',
+layer_shell = shared_module('layer-shell',
 	'layer-shell.cpp', layer_shell_code, layer_shell_server_header, xdg_shell_code,
 	dependencies: [weston, wayland_server],
 	cpp_args: ['-fno-rtti', '-fno-exceptions'],
-	version: '1',
 	name_prefix: '',
 	install_dir: 'lib/weston',
 	install: true)
 
-layered_screenshot = shared_library('layered-screenshot',
+layered_screenshot = shared_module('layered-screenshot',
 	'layered-screenshot.cpp', layered_screenshot_fb, layered_screenshot_code, layered_screenshot_server_header,
 	include_directories: [inc_flatbuffers],
 	dependencies: [weston, wayland_server, lib_flatbuffers],
 	cpp_args: ['-fno-rtti'],
-	version: '1',
 	name_prefix: '',
 	install_dir: 'lib/weston',
 	install: true)
