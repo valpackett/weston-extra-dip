@@ -64,6 +64,7 @@ struct lsh_context {
 		if (head != nullptr) {
 			output_destroy_listener.notify = on_output_gone;
 			wl_signal_add(&weston_head_get_output(head)->destroy_signal, &output_destroy_listener);
+			weston_log("layer-shell: attached to output %p\n", weston_head_get_output(head));
 		}
 		view = weston_view_create(surface);
 		surface->committed_private = this;
@@ -135,13 +136,13 @@ struct lsh_context {
 static void on_output_gone(struct wl_listener *listener, void *data) {
 	auto *ctx =
 	    wl_container_of(listener, static_cast<struct lsh_context *>(nullptr), output_destroy_listener);
-	weston_log("Output gone, sending close to layer-shell surface\n");
+	weston_log("layer-shell: output gone, sending close to surface\n");
 	zwlr_layer_surface_v1_send_closed(ctx->resource);
 }
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
 	auto *ctx = static_cast<struct lsh_context *>(surface->committed_private);
-	weston_log("Map %d\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
+	weston_log("layer-shell: is_mapped: %d\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
 	if (!weston_view_is_mapped(ctx->view)) {
 		switch (ctx->layer) {
 			break;
@@ -166,17 +167,22 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 		weston_view_update_transform(ctx->view);  // assigns an output if there was none
 	}
 	if (ctx->view->output == nullptr) {
-		weston_log("WTF: no calculated output for surface\n");
+		weston_log("layer-shell: WTF: no calculated output for surface\n");
 		return;
 	}
 	auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
+	weston_log("layer-shell: output size: %d, %d\n", ctx->view->output->width, ctx->view->output->height);
 	int sw, sh;
 	weston_surface_get_content_size(surface, &sw, &sh);
+	weston_log("layer-shell: content size: %d, %d\n", sw, sh);
 	int32_t x, y, nw, nh;
 	std::tie(x, y) = ctx->position(std::make_pair(sw, sh), output_size);
+	weston_log("layer-shell: calculated position + output position: %d + %d, %d + %d\n", x, ctx->view->output->x, y, ctx->view->output->y);
 	weston_view_set_position(ctx->view, x + ctx->view->output->x, y + ctx->view->output->y);
 	std::tie(nw, nh) = ctx->next_size(std::make_pair(sw, sh), output_size);
+	weston_log("layer-shell: next size: %d, %d\n", nw, nh);
 	if (nw != sw || nh != sh) {
+		weston_log("layer-shell: sending configure\n");
 		zwlr_layer_surface_v1_send_configure(ctx->resource, 0, nw, nh);
 	}
 	weston_view_update_transform(ctx->view); // -> view_assign_output -> view_set_output -> sets destroy listener
