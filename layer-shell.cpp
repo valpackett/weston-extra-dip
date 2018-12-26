@@ -172,16 +172,15 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 	}
 	auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
 	weston_log("layer-shell: output size: %d, %d\n", ctx->view->output->width, ctx->view->output->height);
-	int sw, sh;
-	weston_surface_get_content_size(surface, &sw, &sh);
-	weston_log("layer-shell: content size: %d, %d\n", sw, sh);
+	auto surface_size = std::make_pair(surface->width, surface->height);
+	weston_log("layer-shell: surface size: %d, %d\n", surface->width, surface->height);
 	int32_t x, y, nw, nh;
-	std::tie(x, y) = ctx->position(std::make_pair(sw, sh), output_size);
+	std::tie(x, y) = ctx->position(surface_size, output_size);
 	weston_log("layer-shell: calculated position + output position: %d + %d, %d + %d\n", x, ctx->view->output->x, y, ctx->view->output->y);
 	weston_view_set_position(ctx->view, x + ctx->view->output->x, y + ctx->view->output->y);
-	std::tie(nw, nh) = ctx->next_size(std::make_pair(sw, sh), output_size);
+	std::tie(nw, nh) = ctx->next_size(surface_size, output_size);
 	weston_log("layer-shell: next size: %d, %d\n", nw, nh);
-	if (nw != sw || nh != sh) {
+	if (nw != surface->width || nh != surface->height) {
 		weston_log("layer-shell: sending configure\n");
 		zwlr_layer_surface_v1_send_configure(ctx->resource, 0, nw, nh);
 	}
