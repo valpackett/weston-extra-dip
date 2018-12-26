@@ -34,6 +34,8 @@ static struct zwlr_layer_surface_v1_interface lsh_impl = {
 
 static void lsh_destructor(struct wl_resource *resource);
 
+static void on_output_gone(struct wl_listener *listener, void *data);
+
 const auto t = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
 const auto r = ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
 const auto b = ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
@@ -54,10 +56,15 @@ struct lsh_context {
 	coords req_size;
 	struct lsh_margin margin = {0, 0, 0, 0};
 	struct wl_resource *resource;
+	struct wl_listener output_destroy_listener;
 
 	lsh_context(struct weston_surface *s, struct weston_head *h, zwlr_layer_shell_v1_layer l,
 	            struct wl_client *client, uint32_t id)
 	    : surface(s), head(h), layer(l) {
+		if (head != nullptr) {
+			output_destroy_listener.notify = on_output_gone;
+			wl_signal_add(&weston_head_get_output(head)->destroy_signal, &output_destroy_listener);
+		}
 		view = weston_view_create(surface);
 		surface->committed_private = this;
 		surface->committed = committed_callback;
@@ -121,6 +128,13 @@ struct lsh_context {
 
 	lsh_context(lsh_context &&) = delete;
 };
+
+static void on_output_gone(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct lsh_context *>(nullptr), output_destroy_listener);
+	weston_log("Output gone, sending close to layer-shell surface\n");
+	zwlr_layer_surface_v1_send_closed(ctx->resource);
+}
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
 	auto *ctx = static_cast<struct lsh_context *>(surface->committed_private);
