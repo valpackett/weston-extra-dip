@@ -124,6 +124,9 @@ struct lsh_context {
 		surface->committed = nullptr;
 		surface->committed_private = nullptr;
 		wl_resource_set_user_data(resource, nullptr);
+		if (head != nullptr) {
+			wl_list_remove(&output_destroy_listener.link);
+		}
 	}
 
 	lsh_context(lsh_context &&) = delete;
