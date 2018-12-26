@@ -1,5 +1,6 @@
 #include <tuple>
 #include <utility>
+#include <iostream>
 
 extern "C" {
 #include <compositor.h>
@@ -58,10 +59,6 @@ struct lsh_context {
 	            struct wl_client *client, uint32_t id)
 	    : surface(s), head(h), layer(l) {
 		view = weston_view_create(surface);
-		if (head != nullptr) {
-			weston_view_set_output(view, weston_head_get_output(head));
-			// TODO subscribe to destruction
-		}
 		surface->committed_private = this;
 		surface->committed = committed_callback;
 		resource = wl_resource_create(client, &zwlr_layer_surface_v1_interface, 1, id);
@@ -127,7 +124,7 @@ struct lsh_context {
 
 static void committed_callback(struct weston_surface *surface, int32_t sx, int32_t sy) {
 	auto *ctx = static_cast<struct lsh_context *>(surface->committed_private);
-	weston_log("Map %b\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
+	weston_log("Map %d\n", static_cast<int>(weston_view_is_mapped(ctx->view)));
 	if (!weston_view_is_mapped(ctx->view)) {
 		switch (ctx->layer) {
 			break;
@@ -145,19 +142,27 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 		}
 		ctx->view->is_mapped = true;
 	}
-	weston_view_update_transform(ctx->view);  // assigns an output if there was none
-	if (ctx->view->output != nullptr) {
-		auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
-		int sw, sh;
-		weston_surface_get_content_size(surface, &sw, &sh);
-		int32_t x, y, nw, nh;
-		std::tie(x, y) = ctx->position(std::make_pair(sw, sh), output_size);
-		weston_view_set_position(ctx->view, x, y);
-		std::tie(nw, nh) = ctx->next_size(std::make_pair(sw, sh), output_size);
-		if (nw != sw || nh != sh) {
-			zwlr_layer_surface_v1_send_configure(ctx->resource, 0, nw, nh);
-		}
+	if (ctx->head != nullptr) {
+		ctx->view->output = weston_head_get_output(ctx->head);
 	}
+	if (ctx->view->output == nullptr) {
+		weston_view_update_transform(ctx->view);  // assigns an output if there was none
+	}
+	if (ctx->view->output == nullptr) {
+		weston_log("WTF: no calculated output for surface\n");
+		return;
+	}
+	auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
+	int sw, sh;
+	weston_surface_get_content_size(surface, &sw, &sh);
+	int32_t x, y, nw, nh;
+	std::tie(x, y) = ctx->position(std::make_pair(sw, sh), output_size);
+	weston_view_set_position(ctx->view, x + ctx->view->output->x, y + ctx->view->output->y);
+	std::tie(nw, nh) = ctx->next_size(std::make_pair(sw, sh), output_size);
+	if (nw != sw || nh != sh) {
+		zwlr_layer_surface_v1_send_configure(ctx->resource, 0, nw, nh);
+	}
+	weston_view_update_transform(ctx->view); // -> view_assign_output -> view_set_output -> sets destroy listener
 	weston_surface_damage(surface);
 	weston_compositor_schedule_repaint(surface->compositor);
 }
