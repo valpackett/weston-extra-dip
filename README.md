@@ -3,11 +3,15 @@
 # Weston with Extra Dip
 
 A pack of plugins that add extra functionality to Weston, the reference Wayland compositor.
+Designed for the [numbernine] desktop environment.
+
+[numbernine]: https://github.com/myfreeweb/numbernine
 
 - `layer-shell`: implements `wlr_layer_shell_unstable_v1` (well, not completely..)
 - `gamma-control`: implements `wlr_gamma_control_unstable_v1`, e.g. for [this fork of redshift](https://github.com/minus7/redshift/tree/wayland)
 - `layered-screenshot`: dumps surface contents as separate images, included `layered-screenshooter` for now just writes them as separate webp images (but in the future there might be a cool screenshot editor..)
 - `key-modifier-binds`: [xcape](https://github.com/alols/xcape) style key binds, currently hardcoded to CapsLock (scancode, no matter if you rebind to Ctrl or not) as Escape and Shifts as Parens
+- `compositor-management`: notifies a manager (desktop environment) of compositor state changes, executes the manager's commands
 
 ## Installation
 

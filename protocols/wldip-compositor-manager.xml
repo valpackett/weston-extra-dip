@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="wldip_compositor_manager">
+
+  <interface name="wldip_compositor_manager" version="1">
+    <request name="subscribe"/>
+
+    <event name="update">
+      <arg name="state" type="fd" summary="descriptor to a wlst format file"/>
+    </event>
+
+  </interface>
+
+</protocol>
