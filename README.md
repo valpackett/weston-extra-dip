@@ -36,7 +36,7 @@ Add to `weston.ini` and restart Weston.
 
 ```ini
 [core]
-modules=key-modifier-binds.so.1,gamma-control.so.1,layered-screenshot.so.1,layer-shell.so.1
+modules=key-modifier-binds.so,gamma-control.so,layered-screenshot.so,layer-shell.so,compositor-management.so
 ```
 
 ## Contributing
