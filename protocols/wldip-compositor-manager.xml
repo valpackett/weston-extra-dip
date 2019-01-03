@@ -2,7 +2,29 @@
 <protocol name="wldip_compositor_manager">
 
   <interface name="wldip_compositor_manager" version="1">
-    <request name="subscribe"/>
+    <enum name="topic" bitfield="true">
+      <entry name="surfaces" value="1" summary="notify on surface events"/>
+      <entry name="outputs" value="2" summary="notify on output and head events"/>
+      <entry name="inputdevs" value="4" summary="notify on input device and seat events"/>
+    </enum>
+
+    <request name="subscribe">
+      <description summary="subscribe to updates">
+        Requests the compositor to send update events when there's any event that
+        corresponds to one of the topics selected via the topics bitfield.
+
+        There is no way to unsubscribe currently, as the intended users of the protocol
+        are simple daemons that synchronize the state a settings store like dconf,
+        panels that always need to know current surfaces, etc.
+      </description>
+      <arg name="topics" type="uint" enum="topic"/>
+    </request>
+
+    <request name="get">
+      <description summary="request one update">
+        Requests one update event from the compositor.
+      </description>
+    </request>
 
     <event name="update">
       <arg name="state" type="fd" summary="descriptor to a wlst format file"/>

@@ -77,6 +77,8 @@ static std::string capability_name(wldip::compositor_management::DeviceCapabilit
 	return "-UNKNOWN-";
 }
 
+static uint64_t updates_recvd = 0;
+
 static void on_update(void *data, struct wldip_compositor_manager *shooter, int recv_fd) {
 	using namespace wldip::compositor_management;
 	struct stat recv_stat {};
@@ -193,7 +195,7 @@ static void on_update(void *data, struct wldip_compositor_manager *shooter, int 
 			std::cout << "  Model: " << head->model()->str() << std::endl;
 			std::cout << "  Serial number: " << head->serial_number()->str() << std::endl;
 			std::cout << "  Subpixel: " << head->subpixel() << std::endl;
-			std::cout << "  Interal: " << head->connection_internal() << std::endl;
+			std::cout << "  Internal: " << head->connection_internal() << std::endl;
 			std::cout << "  Connected: " << head->connected() << std::endl;
 			std::cout << "  Non-desktop (VR): " << head->non_desktop() << std::endl;
 			std::cout << std::endl;
@@ -212,7 +214,7 @@ static void on_update(void *data, struct wldip_compositor_manager *shooter, int 
 				role = surface->other_role()->str();
 			}
 			std::cout << "  Role: " << role << std::endl;
-			if (surface->role() == Role_XdgToplevel) {
+			if (surface->desktop()) {
 				std::cout << "  Desktop surface data:" << std::endl;
 				auto dsurf = surface->desktop();
 				std::cout << "    Title: " << dsurf->title()->str() << std::endl;
@@ -234,6 +236,7 @@ static void on_update(void *data, struct wldip_compositor_manager *shooter, int 
 		std::cout << std::endl;
 	}
 	close(recv_fd);
+	updates_recvd++;
 }
 
 static const struct wldip_compositor_manager_listener shooter_listener = {on_update};
@@ -255,9 +258,23 @@ int main(int argc, char *argv[]) {
 	}
 
 	wldip_compositor_manager_add_listener(shooter, &shooter_listener, nullptr);
-	wldip_compositor_manager_subscribe(shooter);
-	while (true) {
-		wl_display_dispatch(display);
-		wl_display_roundtrip(display);
+
+	if (argc == 2 && std::string(argv[1]) == "get") {
+		wldip_compositor_manager_get(shooter);
+		while (updates_recvd < 1) {
+			wl_display_dispatch(display);
+			wl_display_roundtrip(display);
+		}
+	} else if (argc == 2 && std::string(argv[1]) == "watch") {
+		wldip_compositor_manager_subscribe(shooter, WLDIP_COMPOSITOR_MANAGER_TOPIC_SURFACES |
+		                                                WLDIP_COMPOSITOR_MANAGER_TOPIC_OUTPUTS |
+		                                                WLDIP_COMPOSITOR_MANAGER_TOPIC_INPUTDEVS);
+		while (true) {
+			wl_display_dispatch(display);
+			wl_display_roundtrip(display);
+		}
+	} else {
+		std::cerr << "Usage: " << argv[0] << " get|watch" << std::endl;
+		return -1;
 	}
 }

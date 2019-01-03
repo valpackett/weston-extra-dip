@@ -16,13 +16,49 @@ extern "C" {
 #include <unistd.h>
 #include "wldip-compositor-manager-server-protocol.h"
 
+static void on_create_surface(struct wl_listener *listener, void *data);
+static void on_activate(struct wl_listener *listener, void *data);
+static void on_output_created(struct wl_listener *listener, void *data);
+static void on_output_destroyed(struct wl_listener *listener, void *data);
+static void on_output_moved(struct wl_listener *listener, void *data);
+static void on_output_resized(struct wl_listener *listener, void *data);
+static void on_output_heads_changed(struct wl_listener *listener, void *data);
+static void on_input_devices_changed(struct wl_listener *listener, void *data);
+
 struct cm_context {
 	struct weston_compositor *compositor;
-	std::unordered_set<wl_resource *> subscribers;
+	std::unordered_set<wl_resource *> surfaces_subscribers;
+	std::unordered_set<wl_resource *> outputs_subscribers;
+	std::unordered_set<wl_resource *> inputdevs_subscribers;
+	struct wl_listener create_surface_listener;
+	struct wl_listener activate_listener;
+	struct wl_listener output_created_listener;
+	struct wl_listener output_destroyed_listener;
+	struct wl_listener output_moved_listener;
+	struct wl_listener output_resized_listener;
+	struct wl_listener output_heads_changed_listener;
+	struct wl_listener input_devices_changed_listener;
 
-	cm_context(struct weston_compositor *c) : compositor(c) {}
+	cm_context(struct weston_compositor *c) : compositor(c) {
+		create_surface_listener.notify = on_create_surface;
+		wl_signal_add(&c->create_surface_signal, &create_surface_listener);
+		activate_listener.notify = on_activate;
+		wl_signal_add(&c->activate_signal, &activate_listener);
+		output_created_listener.notify = on_output_created;
+		wl_signal_add(&c->output_created_signal, &output_created_listener);
+		output_destroyed_listener.notify = on_output_destroyed;
+		wl_signal_add(&c->output_destroyed_signal, &output_destroyed_listener);
+		output_moved_listener.notify = on_output_moved;
+		wl_signal_add(&c->output_moved_signal, &output_moved_listener);
+		output_resized_listener.notify = on_output_resized;
+		wl_signal_add(&c->output_resized_signal, &output_resized_listener);
+		output_heads_changed_listener.notify = on_output_heads_changed;
+		wl_signal_add(&c->output_heads_changed_signal, &output_heads_changed_listener);
+		input_devices_changed_listener.notify = on_input_devices_changed;
+		wl_signal_add(&c->input_devices_changed_signal, &input_devices_changed_listener);
+	}
 
-	void send_update() {
+	int make_update() {
 		using namespace wldip::compositor_management;
 		flatbuffers::FlatBufferBuilder builder(4096);
 
@@ -217,6 +253,9 @@ struct cm_context {
 			}
 			surfb.add_role(role);
 			surfb.add_label(labelo);
+			if (surface->output) {
+				surfb.add_primary_output_id(surface->output->id);
+			}
 			if (weston_surface_is_desktop_surface(surface)) {
 				surfb.add_desktop(dsurfo);
 			}
@@ -231,7 +270,34 @@ struct cm_context {
 		ftruncate(fd, builder.GetSize());
 		write(fd, builder.GetBufferPointer(), builder.GetSize());
 		lseek(fd, 0, SEEK_SET);
-		for (auto resource : subscribers) {
+		return fd;
+	}
+
+	void send_update_to(struct wl_resource *resource) {
+		int fd = make_update();
+		wldip_compositor_manager_send_update(resource, fd);
+		close(fd);
+	}
+
+	void send_update_surface() {
+		int fd = make_update();
+		for (auto resource : surfaces_subscribers) {
+			wldip_compositor_manager_send_update(resource, fd);
+		}
+		close(fd);
+	}
+
+	void send_update_output() {
+		int fd = make_update();
+		for (auto resource : outputs_subscribers) {
+			wldip_compositor_manager_send_update(resource, fd);
+		}
+		close(fd);
+	}
+
+	void send_update_inputdevs() {
+		int fd = make_update();
+		for (auto resource : inputdevs_subscribers) {
 			wldip_compositor_manager_send_update(resource, fd);
 		}
 		close(fd);
@@ -240,18 +306,80 @@ struct cm_context {
 	cm_context(cm_context &&) = delete;
 };
 
-static void subscribe(struct wl_client *client, struct wl_resource *resource) {
+static void on_create_surface(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct cm_context *>(nullptr), create_surface_listener);
+	ctx->send_update_surface();
+}
+
+static void on_activate(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct cm_context *>(nullptr), activate_listener);
+	ctx->send_update_surface();
+}
+
+static void on_output_created(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct cm_context *>(nullptr), output_created_listener);
+	ctx->send_update_output();
+}
+
+static void on_output_destroyed(struct wl_listener *listener, void *data) {
+	auto *ctx = wl_container_of(listener, static_cast<struct cm_context *>(nullptr),
+	                            output_destroyed_listener);
+	ctx->send_update_output();
+}
+
+static void on_output_moved(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct cm_context *>(nullptr), output_moved_listener);
+	ctx->send_update_output();
+}
+
+static void on_output_resized(struct wl_listener *listener, void *data) {
+	auto *ctx =
+	    wl_container_of(listener, static_cast<struct cm_context *>(nullptr), output_resized_listener);
+	ctx->send_update_output();
+}
+
+static void on_output_heads_changed(struct wl_listener *listener, void *data) {
+	auto *ctx = wl_container_of(listener, static_cast<struct cm_context *>(nullptr),
+	                            output_heads_changed_listener);
+	ctx->send_update_output();
+}
+
+static void on_input_devices_changed(struct wl_listener *listener, void *data) {
+	auto *ctx = wl_container_of(listener, static_cast<struct cm_context *>(nullptr),
+	                            input_devices_changed_listener);
+	ctx->send_update_inputdevs();
+}
+
+static void cm_subscribe(struct wl_client *client, struct wl_resource *resource, uint32_t topics) {
 	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
-	ctx->subscribers.insert(resource);
-	ctx->send_update();  // greet the client with the current state
+	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_SURFACES) {
+		ctx->surfaces_subscribers.insert(resource);
+	}
+	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_OUTPUTS) {
+		ctx->outputs_subscribers.insert(resource);
+	}
+	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_INPUTDEVS) {
+		ctx->inputdevs_subscribers.insert(resource);
+	}
+}
+
+static void cm_get(struct wl_client *client, struct wl_resource *resource) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->send_update_to(resource);
 }
 
 static void cm_destructor(struct wl_resource *resource) {
 	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
-	ctx->subscribers.erase(resource);
+	ctx->surfaces_subscribers.erase(resource);
+	ctx->outputs_subscribers.erase(resource);
+	ctx->inputdevs_subscribers.erase(resource);
 }
 
-static struct wldip_compositor_manager_interface cm_impl = {subscribe};
+static struct wldip_compositor_manager_interface cm_impl = {cm_subscribe, cm_get};
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
 	struct wl_resource *resource =

@@ -31,6 +31,7 @@ table Surface {
 	width: int32;
 	height: int32;
 	desktop: DesktopSurface; // present when role == XdgToplevel
+	primary_output_id: int32;
 }
 
 // We expose more details than wl_output: internal connection, head vs output..
