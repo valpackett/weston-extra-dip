@@ -257,6 +257,7 @@ static void on_update(void *data, struct wldip_compositor_manager *shooter, int 
 				role = surface->other_role()->str();
 			}
 			std::cout << "  Role: " << role << std::endl;
+			std::cout << "  Primary output: " << surface->primary_output_id() << std::endl;
 			if (surface->desktop() != nullptr) {
 				std::cout << "  Desktop surface data:" << std::endl;
 				auto dsurf = surface->desktop();
@@ -302,12 +303,16 @@ int main(int argc, char *argv[]) {
 
 	wldip_compositor_manager_add_listener(shooter, &shooter_listener, nullptr);
 
-	if (argc == 2 && std::string(argv[1]) == "get") {
+	auto run_get = [=] {
 		wldip_compositor_manager_get(shooter);
 		while (updates_recvd < 1) {
 			wl_display_dispatch(display);
 			wl_display_roundtrip(display);
 		}
+	};
+
+	if (argc == 2 && std::string(argv[1]) == "get") {
+		run_get();
 	} else if (argc == 2 && std::string(argv[1]) == "watch") {
 		wldip_compositor_manager_subscribe(shooter, WLDIP_COMPOSITOR_MANAGER_TOPIC_SURFACES |
 		                                                WLDIP_COMPOSITOR_MANAGER_TOPIC_OUTPUTS |
@@ -316,8 +321,24 @@ int main(int argc, char *argv[]) {
 			wl_display_dispatch(display);
 			wl_display_roundtrip(display);
 		}
+	} else if (argc == 4 && std::string(argv[1]) == "set-output-scale") {
+		wldip_compositor_manager_output_set_scale(shooter, std::stoi(argv[2]),
+		                                          wl_fixed_from_double(std::stod(argv[3])));
+		run_get();
+	} else if (argc == 5 && std::string(argv[1]) == "set-natural-scroll") {
+		wldip_compositor_manager_device_set_natural_scrolling(shooter, std::stoi(argv[2]),
+		                                                      std::stoi(argv[3]), std::stoi(argv[4]));
+		run_get();
+	} else if (argc == 3 && std::string(argv[1]) == "activate-surface") {
+		wldip_compositor_manager_desktop_surface_activate(shooter, std::stoi(argv[2]));
+		run_get();
 	} else {
-		std::cerr << "Usage: " << argv[0] << " get|watch" << std::endl;
+		std::cerr << "Usage: " << argv[0] << " ..." << std::endl;
+		std::cerr << "  get" << std::endl;
+		std::cerr << "  watch" << std::endl;
+		std::cerr << "  set-output-scale id scale" << std::endl;
+		std::cerr << "  set-natural-scroll seat_idx dev_idx 0/1" << std::endl;
+		std::cerr << "  activate-surface uid" << std::endl;
 		return -1;
 	}
 }

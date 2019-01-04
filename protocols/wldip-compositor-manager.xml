@@ -2,6 +2,13 @@
 <protocol name="wldip_compositor_manager">
 
   <interface name="wldip_compositor_manager" version="1">
+    <description summary="privileged protocol for managing Weston compositor internals">
+      This protocol allows external privileged applications to get dumps of the important bits
+      of the compositor state (as file descriptors to flatbuffer serializations), both
+      on demand and as notifications for events,
+      and to tell the compositor to change some bits of the state.
+    </description>
+
     <enum name="topic" bitfield="true">
       <entry name="surfaces" value="1" summary="notify on surface events"/>
       <entry name="outputs" value="2" summary="notify on output and head events"/>
@@ -29,6 +36,21 @@
     <event name="update">
       <arg name="state" type="fd" summary="descriptor to a wlst format file"/>
     </event>
+
+    <request name="desktop_surface_activate">
+      <arg name="surface_uid" type="uint" summary="uid of surface"/>
+    </request>
+
+    <request name="output_set_scale">
+      <arg name="output_id" type="uint" summary="id of the output"/>
+      <arg name="scale" type="fixed" summary="desired scale"/>
+    </request>
+
+    <request name="device_set_natural_scrolling">
+      <arg name="seat_idx" type="uint" summary="index of the seat"/>
+      <arg name="device_idx" type="uint" summary="index of the input device"/>
+      <arg name="enable" type="uint" summary="desired state of natural scrolling (bool)"/>
+    </request>
 
   </interface>
 

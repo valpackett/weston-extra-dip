@@ -7,6 +7,7 @@
 extern "C" {
 #include <compositor-drm.h>
 #include <compositor.h>
+#include <desktop-shell-api.h>
 #include <fcntl.h>
 #include <libinput-device.h>
 #include <libinput-seat.h>
@@ -27,6 +28,7 @@ static void on_input_devices_changed(struct wl_listener *listener, void *data);
 
 struct cm_context {
 	struct weston_compositor *compositor;
+	const struct weston_desktop_shell_api *desk_shell;
 	std::unordered_set<wl_resource *> surfaces_subscribers;
 	std::unordered_set<wl_resource *> outputs_subscribers;
 	std::unordered_set<wl_resource *> inputdevs_subscribers;
@@ -40,6 +42,7 @@ struct cm_context {
 	struct wl_listener input_devices_changed_listener {};
 
 	cm_context(struct weston_compositor *c) : compositor(c) {
+		desk_shell = weston_desktop_shell_get_api(c);
 		create_surface_listener.notify = on_create_surface;
 		wl_signal_add(&c->create_surface_signal, &create_surface_listener);
 		activate_listener.notify = on_activate;
@@ -244,7 +247,7 @@ struct cm_context {
 			}
 			auto labelo = builder.CreateString(label);
 			SurfaceBuilder surfb(builder);
-			surfb.add_uid(reinterpret_cast<uint64_t>(surface));
+			surfb.add_uid(reinterpret_cast<uint64_t>(surface) % 1000000);
 			Role role = Role_Other;
 			surfb.add_other_role(rolenameo);
 			if (std::string(rolename) == "xdg_toplevel") {
@@ -302,6 +305,28 @@ struct cm_context {
 			wldip_compositor_manager_send_update(resource, fd);
 		}
 		close(fd);
+	}
+
+	void with_input_device(uint32_t seat_idx, uint32_t device_idx,
+	                       const std::function<void(evdev_device *)> &f) {
+		struct weston_seat *seat;
+		uint32_t cur_seat = 0, cur_dev = 0;
+		wl_list_for_each(seat, &compositor->seat_list, link) {
+			if (cur_seat++ != seat_idx) {
+				continue;
+			}
+			// TODO: support fbdev/scfb
+			if (weston_drm_virtual_output_get_api(compositor) != nullptr) {
+				auto *useat = reinterpret_cast<udev_seat *>(seat);
+				struct evdev_device *device;
+				wl_list_for_each(device, &useat->devices_list, link) {
+					if (cur_dev++ == device_idx) {
+						f(device);
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	cm_context(cm_context &&) = delete;
@@ -373,6 +398,50 @@ static void cm_get(struct wl_client *client, struct wl_resource *resource) {
 	ctx->send_update_to(resource);
 }
 
+static void cm_desktop_surface_activate(struct wl_client *client, struct wl_resource *resource,
+                                        uint32_t surface_uid) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	struct weston_view *view;
+	wl_list_for_each(view, &ctx->compositor->view_list, link) {
+		if (reinterpret_cast<uint64_t>(view->surface) % 1000000 == surface_uid) {
+			struct weston_seat *seat;  // TODO smarter than first seat
+			wl_list_for_each(seat, &ctx->compositor->seat_list, link) { break; }
+			if (!weston_surface_is_desktop_surface(view->surface)) {
+				weston_log("compositor-management: trying to activate a non-desktop surface uid %d\n",
+				           surface_uid);
+				break;
+			}
+			ctx->desk_shell->activate(ctx->desk_shell->get(ctx->compositor), view, seat,
+			                          WESTON_ACTIVATE_FLAG_CONFIGURE);
+			break;
+		}
+	}
+}
+
+static void cm_output_set_scale(struct wl_client *client, struct wl_resource *resource,
+                                uint32_t output_id, wl_fixed_t new_scale) {
+	if (wl_fixed_to_double(new_scale) < 1.0) {
+		return;
+	}
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	struct weston_output *output;
+	wl_list_for_each(output, &ctx->compositor->output_list, link) {
+		if (output->id == output_id) {
+			weston_output_set_scale(output, wl_fixed_to_double(new_scale));
+			break;
+		}
+	}
+}
+
+static void cm_device_set_natural_scrolling(struct wl_client *client, struct wl_resource *resource,
+                                            uint32_t seat_idx, uint32_t device_idx,
+                                            uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_scroll_set_natural_scroll_enabled(device->device, enable);
+	});
+}
+
 static void cm_destructor(struct wl_resource *resource) {
 	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
 	ctx->surfaces_subscribers.erase(resource);
@@ -380,7 +449,9 @@ static void cm_destructor(struct wl_resource *resource) {
 	ctx->inputdevs_subscribers.erase(resource);
 }
 
-static struct wldip_compositor_manager_interface cm_impl = {cm_subscribe, cm_get};
+static struct wldip_compositor_manager_interface cm_impl = {
+    cm_subscribe, cm_get, cm_desktop_surface_activate, cm_output_set_scale,
+    cm_device_set_natural_scrolling};
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
 	struct wl_resource *resource =
