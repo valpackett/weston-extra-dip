@@ -3,6 +3,8 @@ project('weston-extra-dip', ['c', 'cpp'], version: '0.0.1', license: 'Unlicense'
 
 cxx = meson.get_compiler('cpp')
 
+dep_protos = dependency('wayland-protocols')
+system_protos_dir = dep_protos.get_pkgconfig_variable('pkgdatadir')
 dep_scanner = dependency('wayland-scanner', native: true)
 prog_scanner = find_program(dep_scanner.get_pkgconfig_variable('wayland_scanner'))
 wl_code = generator(prog_scanner,
@@ -31,9 +33,9 @@ layer_shell_code = wl_code.process('protocols/wlr-layer-shell-unstable-v1.xml')
 layer_shell_server_header = wl_server_header.process('protocols/wlr-layer-shell-unstable-v1.xml')
 layer_shell_client_header = wl_client_header.process('protocols/wlr-layer-shell-unstable-v1.xml')
 
-xdg_shell_code = wl_code.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
-xdg_shell_server_header = wl_server_header.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
-xdg_shell_client_header = wl_client_header.process('/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml')
+xdg_shell_code = wl_code.process(system_protos_dir / 'stable/xdg-shell/xdg-shell.xml')
+xdg_shell_server_header = wl_server_header.process(system_protos_dir / 'stable/xdg-shell/xdg-shell.xml')
+xdg_shell_client_header = wl_client_header.process(system_protos_dir / 'stable/xdg-shell/xdg-shell.xml')
 
 prog_flatc = find_program('flatc')
 flatc = generator(prog_flatc,
