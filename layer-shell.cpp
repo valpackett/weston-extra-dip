@@ -1,6 +1,6 @@
+#include <iostream>
 #include <tuple>
 #include <utility>
-#include <iostream>
 
 extern "C" {
 #include <compositor.h>
@@ -56,7 +56,7 @@ struct lsh_context {
 	coords req_size;
 	struct lsh_margin margin = {0, 0, 0, 0};
 	struct wl_resource *resource;
-	struct wl_listener output_destroy_listener;
+	struct wl_listener output_destroy_listener {};
 
 	lsh_context(struct weston_surface *s, struct weston_head *h, zwlr_layer_shell_v1_layer l,
 	            struct wl_client *client, uint32_t id)
@@ -134,8 +134,8 @@ struct lsh_context {
 };
 
 static void on_output_gone(struct wl_listener *listener, void *data) {
-	auto *ctx =
-	    wl_container_of(listener, static_cast<struct lsh_context *>(nullptr), output_destroy_listener);
+	auto *ctx = wl_container_of(listener, static_cast<struct lsh_context *>(nullptr),
+	                            output_destroy_listener);
 	weston_log("layer-shell: output gone, sending close to surface\n");
 	zwlr_layer_surface_v1_send_closed(ctx->resource);
 }
@@ -171,12 +171,14 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 		return;
 	}
 	auto output_size = std::make_pair(ctx->view->output->width, ctx->view->output->height);
-	weston_log("layer-shell: output size: %d, %d\n", ctx->view->output->width, ctx->view->output->height);
+	weston_log("layer-shell: output size: %d, %d\n", ctx->view->output->width,
+	           ctx->view->output->height);
 	auto surface_size = std::make_pair(surface->width, surface->height);
 	weston_log("layer-shell: surface size: %d, %d\n", surface->width, surface->height);
 	int32_t x, y, nw, nh;
 	std::tie(x, y) = ctx->position(surface_size, output_size);
-	weston_log("layer-shell: calculated position + output position: %d + %d, %d + %d\n", x, ctx->view->output->x, y, ctx->view->output->y);
+	weston_log("layer-shell: calculated position + output position: %d + %d, %d + %d\n", x,
+	           ctx->view->output->x, y, ctx->view->output->y);
 	weston_view_set_position(ctx->view, x + ctx->view->output->x, y + ctx->view->output->y);
 	std::tie(nw, nh) = ctx->next_size(surface_size, output_size);
 	weston_log("layer-shell: next size: %d, %d\n", nw, nh);
@@ -184,7 +186,8 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 		weston_log("layer-shell: sending configure\n");
 		zwlr_layer_surface_v1_send_configure(ctx->resource, 0, nw, nh);
 	}
-	weston_view_update_transform(ctx->view); // -> view_assign_output -> view_set_output -> sets destroy listener
+	weston_view_update_transform(
+	    ctx->view);  // -> view_assign_output -> view_set_output -> sets destroy listener
 	weston_surface_damage(surface);
 	weston_compositor_schedule_repaint(surface->compositor);
 }

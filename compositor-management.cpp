@@ -30,14 +30,14 @@ struct cm_context {
 	std::unordered_set<wl_resource *> surfaces_subscribers;
 	std::unordered_set<wl_resource *> outputs_subscribers;
 	std::unordered_set<wl_resource *> inputdevs_subscribers;
-	struct wl_listener create_surface_listener;
-	struct wl_listener activate_listener;
-	struct wl_listener output_created_listener;
-	struct wl_listener output_destroyed_listener;
-	struct wl_listener output_moved_listener;
-	struct wl_listener output_resized_listener;
-	struct wl_listener output_heads_changed_listener;
-	struct wl_listener input_devices_changed_listener;
+	struct wl_listener create_surface_listener {};
+	struct wl_listener activate_listener {};
+	struct wl_listener output_created_listener {};
+	struct wl_listener output_destroyed_listener {};
+	struct wl_listener output_moved_listener {};
+	struct wl_listener output_resized_listener {};
+	struct wl_listener output_heads_changed_listener {};
+	struct wl_listener input_devices_changed_listener {};
 
 	cm_context(struct weston_compositor *c) : compositor(c) {
 		create_surface_listener.notify = on_create_surface;
@@ -65,13 +65,13 @@ struct cm_context {
 		std::vector<flatbuffers::Offset<Head>> fheads;
 		struct weston_head *head;
 		wl_list_for_each(head, &compositor->head_list, compositor_link) {
-			const char *name = head->name ? head->name : "";
-			const char *make = head->make ? head->make : "";
-			const char *model = head->model ? head->model : "";
-			const char *serial_number = head->serial_number ? head->serial_number : "";
+			const char *name = head->name != nullptr ? head->name : "";
+			const char *make = head->make != nullptr ? head->make : "";
+			const char *model = head->model != nullptr ? head->model : "";
+			const char *serial_number = head->serial_number != nullptr ? head->serial_number : "";
 			fheads.push_back(CreateHead(
-			    builder, builder.CreateString(name), head->output ? head->output->id : -1, head->mm_width,
-			    head->mm_height, builder.CreateString(make), builder.CreateString(model),
+			    builder, builder.CreateString(name), head->output != nullptr ? head->output->id : -1,
+			    head->mm_width, head->mm_height, builder.CreateString(make), builder.CreateString(model),
 			    builder.CreateString(serial_number), head->subpixel, head->connection_internal,
 			    head->connected, head->non_desktop));
 		}
@@ -79,7 +79,7 @@ struct cm_context {
 		std::vector<flatbuffers::Offset<Output>> foutputs;
 		struct weston_output *output;
 		wl_list_for_each(output, &compositor->output_list, link) {
-			const char *name = output->name ? output->name : "";
+			const char *name = output->name != nullptr ? output->name : "";
 			foutputs.push_back(CreateOutput(builder, output->id, builder.CreateString(name), output->x,
 			                                output->y, output->width, output->height,
 			                                output->current_scale, output->original_scale));
@@ -91,7 +91,7 @@ struct cm_context {
 			std::vector<flatbuffers::Offset<InputDevice>> finputs;
 			// TODO: support fbdev/scfb
 			if (weston_drm_virtual_output_get_api(compositor) != nullptr) {
-				struct udev_seat *useat = reinterpret_cast<udev_seat *>(seat);
+				auto *useat = reinterpret_cast<udev_seat *>(seat);
 				struct evdev_device *device;
 				wl_list_for_each(device, &useat->devices_list, link) {
 					double width, height;
@@ -99,57 +99,58 @@ struct cm_context {
 					int finger_count = libinput_device_config_tap_get_finger_count(device->device);
 					std::vector<uint32_t> click_methods;
 					uint32_t cmethods = libinput_device_config_scroll_get_methods(device->device);
-					if (cmethods & LIBINPUT_CONFIG_CLICK_METHOD_NONE) {
+					if ((cmethods & LIBINPUT_CONFIG_CLICK_METHOD_NONE) != 0u) {
 						click_methods.push_back(ClickMethod_None);
 					}
-					if (cmethods & LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS) {
+					if ((cmethods & LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS) != 0u) {
 						click_methods.push_back(ClickMethod_ButtonAreas);
 					}
-					if (cmethods & LIBINPUT_CONFIG_CLICK_METHOD_CLICKFINGER) {
+					if ((cmethods & LIBINPUT_CONFIG_CLICK_METHOD_CLICKFINGER) != 0u) {
 						click_methods.push_back(ClickMethod_ClickFinger);
 					}
 					std::vector<uint32_t> scroll_methods;
 					uint32_t smethods = libinput_device_config_scroll_get_methods(device->device);
-					if (smethods & LIBINPUT_CONFIG_SCROLL_NO_SCROLL) {
+					if ((smethods & LIBINPUT_CONFIG_SCROLL_NO_SCROLL) != 0u) {
 						scroll_methods.push_back(ScrollMethod_None);
 					}
-					if (smethods & LIBINPUT_CONFIG_SCROLL_2FG) {
+					if ((smethods & LIBINPUT_CONFIG_SCROLL_2FG) != 0u) {
 						scroll_methods.push_back(ScrollMethod_TwoFingers);
 					}
-					if (smethods & LIBINPUT_CONFIG_SCROLL_EDGE) {
+					if ((smethods & LIBINPUT_CONFIG_SCROLL_EDGE) != 0u) {
 						scroll_methods.push_back(ScrollMethod_Edge);
 					}
-					if (smethods & LIBINPUT_CONFIG_SCROLL_ON_BUTTON_DOWN) {
+					if ((smethods & LIBINPUT_CONFIG_SCROLL_ON_BUTTON_DOWN) != 0u) {
 						scroll_methods.push_back(ScrollMethod_OnButtonDown);
 					}
 					std::vector<uint8_t> capabilities;
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_KEYBOARD)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_KEYBOARD) != 0) {
 						capabilities.push_back(DeviceCapability_Keyboard);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_POINTER)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_POINTER) != 0) {
 						capabilities.push_back(DeviceCapability_Pointer);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TOUCH)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TOUCH) != 0) {
 						capabilities.push_back(DeviceCapability_Touch);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TABLET_TOOL)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TABLET_TOOL) !=
+					    0) {
 						capabilities.push_back(DeviceCapability_TabletTool);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TABLET_PAD)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_TABLET_PAD) != 0) {
 						capabilities.push_back(DeviceCapability_TabletPad);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_GESTURE)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_GESTURE) != 0) {
 						capabilities.push_back(DeviceCapability_Gesture);
 					}
-					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_SWITCH)) {
+					if (libinput_device_has_capability(device->device, LIBINPUT_DEVICE_CAP_SWITCH) != 0) {
 						capabilities.push_back(DeviceCapability_Switch);
 					}
 					finputs.push_back(CreateInputDevice(
 					    builder, libinput_device_get_id_product(device->device),
 					    libinput_device_get_id_vendor(device->device), width, height,
 					    libinput_device_touch_get_touch_count(device->device), finger_count,
-					    libinput_device_config_tap_get_default_enabled(device->device),
-					    libinput_device_config_tap_get_enabled(device->device),
+					    libinput_device_config_tap_get_default_enabled(device->device) != 0u,
+					    libinput_device_config_tap_get_enabled(device->device) != 0u,
 					    finger_count == 0 ? TapButtonMap_MIN
 					                      : static_cast<TapButtonMap>(
 					                            libinput_device_config_tap_get_button_map(device->device)),
@@ -157,10 +158,10 @@ struct cm_context {
 					        ? TapButtonMap_MIN
 					        : static_cast<TapButtonMap>(
 					              libinput_device_config_tap_get_default_button_map(device->device)),
-					    libinput_device_config_tap_get_default_drag_enabled(device->device),
-					    libinput_device_config_tap_get_drag_enabled(device->device),
-					    libinput_device_config_tap_get_default_drag_lock_enabled(device->device),
-					    libinput_device_config_tap_get_drag_lock_enabled(device->device),
+					    libinput_device_config_tap_get_default_drag_enabled(device->device) != 0u,
+					    libinput_device_config_tap_get_drag_enabled(device->device) != 0u,
+					    libinput_device_config_tap_get_default_drag_lock_enabled(device->device) != 0u,
+					    libinput_device_config_tap_get_drag_lock_enabled(device->device) != 0u,
 					    static_cast<SendEventsMode>(
 					        libinput_device_config_send_events_get_default_mode(device->device)),
 					    static_cast<SendEventsMode>(
@@ -171,28 +172,28 @@ struct cm_context {
 					        libinput_device_config_accel_get_default_profile(device->device)),
 					    static_cast<AccelerationProfile>(
 					        libinput_device_config_accel_get_profile(device->device)),
-					    libinput_device_config_scroll_get_default_natural_scroll_enabled(device->device),
-					    libinput_device_config_scroll_get_natural_scroll_enabled(device->device),
-					    libinput_device_config_left_handed_is_available(device->device),
-					    libinput_device_config_left_handed_get_default(device->device),
-					    libinput_device_config_left_handed_get(device->device),
+					    libinput_device_config_scroll_get_default_natural_scroll_enabled(device->device) != 0,
+					    libinput_device_config_scroll_get_natural_scroll_enabled(device->device) != 0,
+					    libinput_device_config_left_handed_is_available(device->device) != 0,
+					    libinput_device_config_left_handed_get_default(device->device) != 0,
+					    libinput_device_config_left_handed_get(device->device) != 0,
 					    builder.CreateVector(click_methods),
 					    static_cast<ClickMethod>(
 					        libinput_device_config_click_get_default_method(device->device)),
 					    static_cast<ClickMethod>(libinput_device_config_click_get_method(device->device)),
-					    libinput_device_config_middle_emulation_is_available(device->device),
-					    libinput_device_config_middle_emulation_get_default_enabled(device->device),
-					    libinput_device_config_middle_emulation_get_enabled(device->device),
+					    libinput_device_config_middle_emulation_is_available(device->device) != 0,
+					    libinput_device_config_middle_emulation_get_default_enabled(device->device) != 0u,
+					    libinput_device_config_middle_emulation_get_enabled(device->device) != 0u,
 					    builder.CreateVector(scroll_methods),
 					    static_cast<ScrollMethod>(
 					        libinput_device_config_scroll_get_default_method(device->device)),
 					    static_cast<ScrollMethod>(libinput_device_config_scroll_get_method(device->device)),
 					    libinput_device_config_scroll_get_default_button(device->device),
 					    libinput_device_config_scroll_get_button(device->device),
-					    libinput_device_config_dwt_is_available(device->device),
-					    libinput_device_config_dwt_get_default_enabled(device->device),
-					    libinput_device_config_dwt_get_enabled(device->device),
-					    libinput_device_config_rotation_is_available(device->device),
+					    libinput_device_config_dwt_is_available(device->device) != 0,
+					    libinput_device_config_dwt_get_default_enabled(device->device) != 0u,
+					    libinput_device_config_dwt_get_enabled(device->device) != 0u,
+					    libinput_device_config_rotation_is_available(device->device) != 0,
 					    libinput_device_config_rotation_get_default_angle(device->device),
 					    libinput_device_config_rotation_get_angle(device->device),
 					    builder.CreateVector(capabilities),
@@ -214,9 +215,9 @@ struct cm_context {
 			if (weston_surface_is_desktop_surface(surface)) {
 				auto dsurf = weston_surface_get_desktop_surface(surface);
 				const char *titlestr = weston_desktop_surface_get_title(dsurf);
-				auto titlestro = builder.CreateString(titlestr ? titlestr : "");
+				auto titlestro = builder.CreateString(titlestr != nullptr ? titlestr : "");
 				const char *appidstr = weston_desktop_surface_get_app_id(dsurf);
-				auto appidstro = builder.CreateString(appidstr ? appidstr : "");
+				auto appidstro = builder.CreateString(appidstr != nullptr ? appidstr : "");
 				DesktopSurfaceBuilder dsurfb(builder);
 				dsurfb.add_title(titlestro);
 				dsurfb.add_app_id(appidstro);
@@ -234,10 +235,10 @@ struct cm_context {
 				dsurfo = dsurfb.Finish();
 			}
 
-			const char *rolename = surface->role_name ? surface->role_name : "";
+			const char *rolename = surface->role_name != nullptr ? surface->role_name : "";
 			auto rolenameo = builder.CreateString(rolename);
 			std::string label;
-			if (surface->get_label) {
+			if (surface->get_label != nullptr) {
 				label.resize(1024);
 				label.resize(surface->get_label(surface, const_cast<char *>(label.c_str()), 1024));
 			}
@@ -253,7 +254,7 @@ struct cm_context {
 			}
 			surfb.add_role(role);
 			surfb.add_label(labelo);
-			if (surface->output) {
+			if (surface->output != nullptr) {
 				surfb.add_primary_output_id(surface->output->id);
 			}
 			if (weston_surface_is_desktop_surface(surface)) {
@@ -356,13 +357,13 @@ static void on_input_devices_changed(struct wl_listener *listener, void *data) {
 
 static void cm_subscribe(struct wl_client *client, struct wl_resource *resource, uint32_t topics) {
 	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
-	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_SURFACES) {
+	if ((topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_SURFACES) != 0u) {
 		ctx->surfaces_subscribers.insert(resource);
 	}
-	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_OUTPUTS) {
+	if ((topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_OUTPUTS) != 0u) {
 		ctx->outputs_subscribers.insert(resource);
 	}
-	if (topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_INPUTDEVS) {
+	if ((topics & WLDIP_COMPOSITOR_MANAGER_TOPIC_INPUTDEVS) != 0u) {
 		ctx->inputdevs_subscribers.insert(resource);
 	}
 }

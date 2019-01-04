@@ -26,54 +26,97 @@ static const struct wl_registry_listener registry_listener = {handle_global, han
 
 static std::string button_map_name(wldip::compositor_management::TapButtonMap tbm) {
 	using namespace wldip::compositor_management;
-	if (tbm == TapButtonMap_LeftRightMiddle) return "Left-Right-Middle";
-	if (tbm == TapButtonMap_LeftMiddleRight) return "Left-Middle-Right";
+	if (tbm == TapButtonMap_LeftRightMiddle) {
+		return "Left-Right-Middle";
+	}
+	if (tbm == TapButtonMap_LeftMiddleRight) {
+		return "Left-Middle-Right";
+	}
 	return "-UNKNOWN-";
 }
 
 static std::string send_events_mode_name(wldip::compositor_management::SendEventsMode sem) {
 	using namespace wldip::compositor_management;
-	if (sem == SendEventsMode_Enabled) return "Enabled";
-	if (sem == SendEventsMode_Disabled) return "Disabled";
-	if (sem == SendEventsMode_DisabledOnExternalMouse)
+	if (sem == SendEventsMode_Enabled) {
+		return "Enabled";
+	}
+	if (sem == SendEventsMode_Disabled) {
+		return "Disabled";
+	}
+	if (sem == SendEventsMode_DisabledOnExternalMouse) {
 		return "Disabled when an external mouse is connected";
+	}
 	return "-UNKNOWN-";
 }
 
 static std::string accel_profile_name(wldip::compositor_management::AccelerationProfile ap) {
 	using namespace wldip::compositor_management;
-	if (ap == AccelerationProfile_None) return "None";
-	if (ap == AccelerationProfile_Flat) return "Flat";
-	if (ap == AccelerationProfile_Adaptive) return "Adaptive";
+	if (ap == AccelerationProfile_None) {
+		return "None";
+	}
+	if (ap == AccelerationProfile_Flat) {
+		return "Flat";
+	}
+	if (ap == AccelerationProfile_Adaptive) {
+		return "Adaptive";
+	}
 	return "-UNKNOWN-";
 }
 
 static std::string click_method_name(wldip::compositor_management::ClickMethod cm) {
 	using namespace wldip::compositor_management;
-	if (cm == ClickMethod_None) return "None";
-	if (cm == ClickMethod_ButtonAreas) return "Button areas";
-	if (cm == ClickMethod_ClickFinger) return "Clickfinger";
+	if (cm == ClickMethod_None) {
+		return "None";
+	}
+	if (cm == ClickMethod_ButtonAreas) {
+		return "Button areas";
+	}
+	if (cm == ClickMethod_ClickFinger) {
+		return "Clickfinger";
+	}
 	return "-UNKNOWN-";
 }
 
 static std::string scroll_method_name(wldip::compositor_management::ScrollMethod cm) {
 	using namespace wldip::compositor_management;
-	if (cm == ScrollMethod_None) return "None";
-	if (cm == ScrollMethod_TwoFingers) return "Two-finger";
-	if (cm == ScrollMethod_Edge) return "Edge";
-	if (cm == ScrollMethod_OnButtonDown) return "Button holding";
+	if (cm == ScrollMethod_None) {
+		return "None";
+	}
+	if (cm == ScrollMethod_TwoFingers) {
+		return "Two-finger";
+	}
+	if (cm == ScrollMethod_Edge) {
+		return "Edge";
+	}
+	if (cm == ScrollMethod_OnButtonDown) {
+		return "Button holding";
+	}
 	return "-UNKNOWN-";
 }
 
 static std::string capability_name(wldip::compositor_management::DeviceCapability cap) {
 	using namespace wldip::compositor_management;
-	if (cap == DeviceCapability_Keyboard) return "keyboard";
-	if (cap == DeviceCapability_Pointer) return "pointer";
-	if (cap == DeviceCapability_Touch) return "touch";
-	if (cap == DeviceCapability_TabletTool) return "tablet-tool";
-	if (cap == DeviceCapability_TabletPad) return "tablet-pad";
-	if (cap == DeviceCapability_Gesture) return "gesture";
-	if (cap == DeviceCapability_Switch) return "switch";
+	if (cap == DeviceCapability_Keyboard) {
+		return "keyboard";
+	}
+	if (cap == DeviceCapability_Pointer) {
+		return "pointer";
+	}
+	if (cap == DeviceCapability_Touch) {
+		return "touch";
+	}
+	if (cap == DeviceCapability_TabletTool) {
+		return "tablet-tool";
+	}
+	if (cap == DeviceCapability_TabletPad) {
+		return "tablet-pad";
+	}
+	if (cap == DeviceCapability_Gesture) {
+		return "gesture";
+	}
+	if (cap == DeviceCapability_Switch) {
+		return "switch";
+	}
 	return "-UNKNOWN-";
 }
 
@@ -210,11 +253,11 @@ static void on_update(void *data, struct wldip_compositor_manager *shooter, int 
 				role = "application window (xdg-toplevel)";
 			} else if (surface->role() == Role_Lsh) {
 				role = "system UI (layer-shell)";
-			} else if (surface->other_role()->str().size() > 0) {
+			} else if (!surface->other_role()->str().empty()) {
 				role = surface->other_role()->str();
 			}
 			std::cout << "  Role: " << role << std::endl;
-			if (surface->desktop()) {
+			if (surface->desktop() != nullptr) {
 				std::cout << "  Desktop surface data:" << std::endl;
 				auto dsurf = surface->desktop();
 				std::cout << "    Title: " << dsurf->title()->str() << std::endl;
