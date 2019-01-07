@@ -110,6 +110,7 @@ static void cs_spawn(struct wl_client *client, struct wl_resource *resource, uin
 	weston_log("capabilities: spawned client %p with capabilities '%s' from client %p\n", new_client,
 	           join_caps(global_capabilities.caps[new_client]).c_str(), client);
 	wldip_capability_set_send_spawned(resource, serial, fds[1]);
+	close(fds[1]);
 }
 
 static void cs_destructor(struct wl_resource *resource) {
@@ -135,9 +136,16 @@ static void create_capability_set(struct wl_client *client, struct wl_resource *
 
 static const struct wldip_capabilities_interface impl = {create_capability_set};
 
-static void vip_is_down(struct wl_listener *resource, void *data) {
+static void vip_is_down(struct wl_listener *listener, void *data) {
 	weston_log("capabilities: the important client is dead, quitting for security\n");
 	weston_compositor_exit(global_capabilities.compositor);
+}
+
+static void normal_client_is_down(struct wl_listener *listener, void *data) {
+	weston_log("capabilities: cleanup client %p\n", data);
+	global_capabilities.caps.erase(reinterpret_cast<struct wl_client *>(data));
+	wl_list_remove(&listener->link);
+	delete listener;
 }
 
 static void bind_caps(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
@@ -152,6 +160,8 @@ static void bind_caps(struct wl_client *client, void *data, uint32_t version, ui
 		    "important\n",
 		    client, join_caps(global_capabilities.caps[client]).c_str());
 	}
+	auto *destroy_listener = new wl_listener{.notify = normal_client_is_down};
+	wl_client_add_destroy_listener(client, destroy_listener);
 	wl_resource_set_implementation(resource, &impl, data, nullptr);
 }
 
