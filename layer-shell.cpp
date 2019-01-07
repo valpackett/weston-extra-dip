@@ -233,6 +233,13 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 	    ctx->view);  // -> view_assign_output -> view_set_output -> sets destroy listener
 	weston_surface_damage(surface);
 	weston_compositor_schedule_repaint(surface->compositor);
+	if ((ctx->layer == ZWLR_LAYER_SHELL_V1_LAYER_TOP ||
+	     ctx->layer == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY) &&
+	    ctx->keyboard_interactive) {
+		struct weston_seat *seat;  // TODO smarter than first seat
+		wl_list_for_each(seat, &surface->compositor->seat_list, link) { break; }
+		weston_view_activate(ctx->view, seat, WESTON_ACTIVATE_FLAG_CONFIGURE);
+	}
 }
 
 static void set_size(struct wl_client *client, struct wl_resource *resource, uint32_t width,
