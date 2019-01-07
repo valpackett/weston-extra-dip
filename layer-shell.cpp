@@ -146,6 +146,12 @@ struct lsh_context {
 		}
 		destroyed = true;
 		weston_log("layer-shell: destroying surface\n");
+		if (output_destroy_listener.link.prev != nullptr) {
+			wl_list_remove(&output_destroy_listener.link);
+		}
+		if (surface_destroy_listener.link.prev != nullptr) {
+			wl_list_remove(&surface_destroy_listener.link);
+		}
 		weston_view_damage_below(view);
 		weston_view_destroy(view);
 		lsh_views.erase(view);
