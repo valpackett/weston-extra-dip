@@ -1,15 +1,20 @@
 #include <iostream>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 extern "C" {
 #include <compositor.h>
+#include <linux/input.h>
 #include <unistd.h>
 #include "weston-extra-dip-capabilities-api.h"
 #include "wlr-layer-shell-unstable-v1-server-protocol.h"
 
 static struct weston_compositor *compositor = nullptr;
 static const struct weston_extra_dip_capabilities_api *caps = nullptr;
+
+struct lsh_context;
+static std::unordered_map<struct weston_view *, struct lsh_context *> lsh_views;
 
 struct weston_layer lr_background = {nullptr};
 struct weston_layer lr_bottom = {nullptr};
@@ -61,8 +66,13 @@ struct lsh_context {
 	coords req_size;
 	struct lsh_margin margin = {0, 0, 0, 0};
 	struct wl_resource *resource;
-	struct wl_listener output_destroy_listener {.notify = on_output_gone};
-	struct wl_listener surface_destroy_listener {.notify = on_surface_gone};
+	struct wl_listener output_destroy_listener {
+		.notify = on_output_gone
+	};
+	struct wl_listener surface_destroy_listener {
+		.notify = on_surface_gone
+	};
+	bool keyboard_interactive = false;
 	bool destroyed = false;
 
 	lsh_context(struct weston_surface *s, struct weston_head *h, zwlr_layer_shell_v1_layer l,
@@ -74,6 +84,7 @@ struct lsh_context {
 		}
 		wl_signal_add(&surface->destroy_signal, &surface_destroy_listener);
 		view = weston_view_create(surface);
+		lsh_views.emplace(view, this);
 		surface->committed_private = this;
 		surface->committed = committed_callback;
 		resource = wl_resource_create(client, &zwlr_layer_surface_v1_interface, 1, id);
@@ -137,6 +148,7 @@ struct lsh_context {
 		weston_log("layer-shell: destroying surface\n");
 		weston_view_damage_below(view);
 		weston_view_destroy(view);
+		lsh_views.erase(view);
 		weston_surface_unmap(surface);
 		weston_compositor_schedule_repaint(surface->compositor);
 		surface->committed = nullptr;
@@ -254,7 +266,11 @@ static void set_margin(struct wl_client *client, struct wl_resource *resource, i
 
 static void set_keyboard_interactivity(struct wl_client *client, struct wl_resource *resource,
                                        uint32_t keyboard_interactivity) {
-	weston_log("layer-shell: keyboard interactivity not supported yet\n");
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	if (ctx == nullptr) {
+		return;
+	}
+	ctx->keyboard_interactive = !!keyboard_interactivity;
 }
 
 static void get_popup(struct wl_client *client, struct wl_resource *resource,
@@ -319,6 +335,56 @@ static void bind_shell(struct wl_client *client, void *data, uint32_t version, u
 	wl_resource_set_implementation(resource, &shell_impl, data, nullptr);
 }
 
+// XXX: keyboard interactivity handling: fine for below-desktop, incomplete for above-desktop
+//
+// When a layer-shell surface gets focus, desktop shell will still think that it was focused,
+// so the Mod+Tab window switcher will go to the next surface on the first hit
+
+static bool refocus_topmost_interactive_surface(struct weston_seat *seat) {
+	// Relies on the fact that our binding runs after the desktop shell's because plugins are loaded
+	// after the shell!
+	for (auto &p : lsh_views) {
+		if (p.second->keyboard_interactive && p.second->layer == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY) {
+			weston_view_activate(p.first, seat, WESTON_ACTIVATE_FLAG_CONFIGURE);
+			return true;
+		}
+	}
+	for (auto &p : lsh_views) {
+		if (p.second->keyboard_interactive && p.second->layer == ZWLR_LAYER_SHELL_V1_LAYER_TOP) {
+			weston_view_activate(p.first, seat, WESTON_ACTIVATE_FLAG_CONFIGURE);
+			return true;
+		}
+	}
+	return false;
+}
+
+static void click_to_activate_binding(struct weston_pointer *pointer, const struct timespec *time,
+                                      uint32_t button, void *data) {
+	if (pointer->grab != &pointer->default_grab || pointer->focus == nullptr ||
+	    refocus_topmost_interactive_surface(pointer->seat) || lsh_views.count(pointer->focus) == 0) {
+		return;
+	}
+	auto *ctx = lsh_views[pointer->focus];
+	if (!ctx->keyboard_interactive) {
+		return;
+	}
+	weston_view_activate(pointer->focus, pointer->seat,
+	                     WESTON_ACTIVATE_FLAG_CLICKED | WESTON_ACTIVATE_FLAG_CONFIGURE);
+}
+
+static void touch_to_activate_binding(struct weston_touch *touch, const struct timespec *time,
+                                      void *data) {
+	if (touch->grab != &touch->default_grab || touch->focus == nullptr ||
+	    refocus_topmost_interactive_surface(touch->seat) || lsh_views.count(touch->focus) == 0) {
+		return;
+	}
+	auto *ctx = lsh_views[touch->focus];
+	if (!ctx->keyboard_interactive) {
+		return;
+	}
+	weston_view_activate(touch->focus, touch->seat, WESTON_ACTIVATE_FLAG_CONFIGURE);
+}
+
 WL_EXPORT int wet_module_init(struct weston_compositor *ec, int *argc, char *argv[]) {
 	compositor = ec;
 	if ((caps = weston_extra_dip_capabilities_get_api(compositor)) == nullptr) {
@@ -337,6 +403,12 @@ WL_EXPORT int wet_module_init(struct weston_compositor *ec, int *argc, char *arg
 	weston_layer_set_position(&lr_top, WESTON_LAYER_POSITION_UI);
 	weston_layer_init(&lr_overlay, compositor);
 	weston_layer_set_position(&lr_overlay, WESTON_LAYER_POSITION_LOCK);
+	weston_compositor_add_button_binding(ec, BTN_LEFT, static_cast<enum weston_keyboard_modifier>(0),
+	                                     click_to_activate_binding, nullptr);
+	weston_compositor_add_button_binding(ec, BTN_RIGHT, static_cast<enum weston_keyboard_modifier>(0),
+	                                     click_to_activate_binding, nullptr);
+	weston_compositor_add_touch_binding(ec, static_cast<enum weston_keyboard_modifier>(0),
+	                                    touch_to_activate_binding, nullptr);
 	wl_global_create(compositor->wl_display, &zwlr_layer_shell_v1_interface, 1, nullptr, bind_shell);
 	return 0;
 }
