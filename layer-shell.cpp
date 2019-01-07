@@ -146,7 +146,7 @@ struct lsh_context {
 		}
 		destroyed = true;
 		weston_log("layer-shell: destroying surface\n");
-		if (output_destroy_listener.link.prev != nullptr) {
+		if (head != nullptr && output_destroy_listener.link.prev != nullptr) {
 			wl_list_remove(&output_destroy_listener.link);
 		}
 		if (surface_destroy_listener.link.prev != nullptr) {
@@ -160,9 +160,6 @@ struct lsh_context {
 		surface->committed = nullptr;
 		surface->committed_private = nullptr;
 		wl_resource_set_user_data(resource, nullptr);
-		if (head != nullptr) {
-			wl_list_remove(&output_destroy_listener.link);
-		}
 	}
 
 	lsh_context(lsh_context &&) = delete;
