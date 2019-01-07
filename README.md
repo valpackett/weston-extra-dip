@@ -7,6 +7,7 @@ Designed for the [numbernine] desktop environment.
 
 [numbernine]: https://github.com/myfreeweb/numbernine
 
+- `capabilities`: implements capability-based access control for privileged protocols
 - `layer-shell`: implements `wlr_layer_shell_unstable_v1` (well, not completely..)
 - `gamma-control`: implements `wlr_gamma_control_unstable_v1`, e.g. for [this fork of redshift](https://github.com/minus7/redshift/tree/wayland)
 - `layered-screenshot`: dumps surface contents as separate images, included `layered-screenshooter` for now just writes them as separate webp images (but in the future there might be a cool screenshot editor..)
@@ -36,7 +37,7 @@ Add to `weston.ini` and restart Weston.
 
 ```ini
 [core]
-modules=key-modifier-binds.so,gamma-control.so,layered-screenshot.so,layer-shell.so,compositor-management.so
+modules=capabilities.so,key-modifier-binds.so,gamma-control.so,layered-screenshot.so,layer-shell.so,compositor-management.so
 ```
 
 ## Contributing

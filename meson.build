@@ -14,6 +14,16 @@ webp = dependency('libwebp')
 libinput = dependency('libinput')
 flatbuffers = dependency('Flatbuffers', method: 'cmake', modules: ['flatbuffers::flatbuffers_shared'])
 
+install_headers('weston-extra-dip-capabilities-api.h')
+
+capabilities = shared_module('capabilities',
+	'capabilities.cpp', capabilities_code, capabilities_server_header,
+	dependencies: [weston, wayland_server],
+	cpp_args: ['-fno-rtti', '-fno-exceptions'],
+	name_prefix: '',
+	install_dir: 'lib/weston',
+	install: true)
+
 key_modifier_binds = shared_module('key-modifier-binds',
 	'key-modifier-binds.cpp',
 	dependencies: [weston, wayland_server],
@@ -65,6 +75,8 @@ compositor_manager = executable('compositor-manager',
 	install: true)
 
 all_srcs = [
+	'weston-extra-dip-capabilities-api.h',
+	'capabilities.cpp',
 	'key-modifier-binds.cpp',
 	'gamma-control.cpp',
 	'layer-shell.cpp',

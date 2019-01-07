@@ -13,6 +13,10 @@ wl_client_header = generator(prog_scanner,
 
 # local protos
 
+capabilities_code = wl_code.process('wldip-capabilities.xml')
+capabilities_server_header = wl_server_header.process('wldip-capabilities.xml')
+capabilities_client_header = wl_client_header.process('wldip-capabilities.xml')
+
 layered_screenshot_code = wl_code.process('wldip-layered-screenshooter.xml')
 layered_screenshot_server_header = wl_server_header.process('wldip-layered-screenshooter.xml')
 layered_screenshot_client_header = wl_client_header.process('wldip-layered-screenshooter.xml')
