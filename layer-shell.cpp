@@ -5,7 +5,11 @@
 extern "C" {
 #include <compositor.h>
 #include <unistd.h>
+#include "weston-extra-dip-capabilities-api.h"
 #include "wlr-layer-shell-unstable-v1-server-protocol.h"
+
+static struct weston_compositor *compositor = nullptr;
+static const struct weston_extra_dip_capabilities_api *caps = nullptr;
 
 struct weston_layer lr_background = {nullptr};
 struct weston_layer lr_bottom = {nullptr};
@@ -252,6 +256,14 @@ static void get_layer_surface(struct wl_client *client, struct wl_resource *reso
 		return;
 	}
 
+	if (layer == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY &&
+	    !caps->check(caps->get(compositor), client, "layer-shell-overlay")) {
+		weston_log(
+		    "layer-shell: client %p does not have layer-shell-overlay capability, using top layer\n",
+		    client);
+		layer = ZWLR_LAYER_SHELL_V1_LAYER_TOP;
+	}
+
 	auto *surface = static_cast<struct weston_surface *>(wl_resource_get_user_data(res_surface));
 
 	if (weston_surface_set_role(surface, "layer-shell", resource, ZWLR_LAYER_SHELL_V1_ERROR_ROLE) <
@@ -269,12 +281,24 @@ static void get_layer_surface(struct wl_client *client, struct wl_resource *reso
 static struct zwlr_layer_shell_v1_interface shell_impl = {get_layer_surface};
 
 static void bind_shell(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
+	if (!caps->check(caps->get(compositor), client, "layer-shell")) {
+		weston_log("layer-shell: client %p does not have layer-shell capability\n", client);
+		return;
+	}
 	struct wl_resource *resource = wl_resource_create(client, &zwlr_layer_shell_v1_interface, 1, id);
-	// TODO privilege check
 	wl_resource_set_implementation(resource, &shell_impl, data, nullptr);
 }
 
-WL_EXPORT int wet_module_init(struct weston_compositor *compositor, int *argc, char *argv[]) {
+WL_EXPORT int wet_module_init(struct weston_compositor *ec, int *argc, char *argv[]) {
+	compositor = ec;
+	if ((caps = weston_extra_dip_capabilities_get_api(compositor)) == nullptr) {
+		weston_log(
+		    "layer-shell: did not find capabilities api, did you put the capabilities plugin before "
+		    "this one?\n");
+		return -1;
+	}
+	caps->create(caps->get(compositor), "layer-shell");
+	caps->create(caps->get(compositor), "layer-shell-overlay");
 	weston_layer_init(&lr_background, compositor);
 	weston_layer_set_position(&lr_background, WESTON_LAYER_POSITION_BACKGROUND);
 	weston_layer_init(&lr_bottom, compositor);
