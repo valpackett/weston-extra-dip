@@ -5,12 +5,14 @@
 
 extern "C" {
 #include <compositor.h>
+#include <desktop-shell-api.h>
 #include <linux/input.h>
 #include <unistd.h>
 #include "weston-extra-dip-capabilities-api.h"
 #include "wlr-layer-shell-unstable-v1-server-protocol.h"
 
 static struct weston_compositor *compositor = nullptr;
+static const struct weston_desktop_shell_api *desk_shell = nullptr;
 static const struct weston_extra_dip_capabilities_api *caps = nullptr;
 
 struct lsh_context;
@@ -62,8 +64,9 @@ struct lsh_context {
 	struct weston_view *view;
 	struct weston_head *head;
 	zwlr_layer_shell_v1_layer layer;
-	zwlr_layer_surface_v1_anchor anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
+	zwlr_layer_surface_v1_anchor anchor = t;
 	coords req_size;
+	int32_t excl_zone = 0;
 	struct lsh_margin margin = {0, 0, 0, 0};
 	struct wl_resource *resource;
 	struct wl_listener output_destroy_listener {
@@ -262,7 +265,11 @@ static void set_anchor(struct wl_client *client, struct wl_resource *resource, u
 
 static void set_exclusive_zone(struct wl_client *client, struct wl_resource *resource,
                                int32_t zone) {
-	weston_log("layer-shell: exclusive zone not supported yet\n");
+	auto *ctx = static_cast<struct lsh_context *>(wl_resource_get_user_data(resource));
+	if (ctx == nullptr) {
+		return;
+	}
+	ctx->excl_zone = zone;
 }
 
 static void set_margin(struct wl_client *client, struct wl_resource *resource, int32_t top,
@@ -348,6 +355,38 @@ static void bind_shell(struct wl_client *client, void *data, uint32_t version, u
 	wl_resource_set_implementation(resource, &shell_impl, data, nullptr);
 }
 
+static void lsh_get_output_work_area(struct desktop_shell *shell, struct weston_output *output,
+                                     pixman_rectangle32_t *area) {
+	if (output == nullptr) {
+		area->x = 0;
+		area->y = 0;
+		area->width = 0;
+		area->height = 0;
+		return;
+	}
+
+	area->x = output->x;
+	area->y = output->y;
+	area->width = output->width;
+	area->height = output->height;
+
+	for (auto &p : lsh_views) {
+		if (p.first->surface->output == output && p.second->excl_zone > 0) {
+			if (p.second->anchor == (l | r | t)) {
+				area->y += p.second->excl_zone;
+				area->height -= p.second->excl_zone;
+			} else if (p.second->anchor == (l | r | b)) {
+				area->height -= p.second->excl_zone;
+			} else if (p.second->anchor == (t | b | l)) {
+				area->x += p.second->excl_zone;
+				area->width -= p.second->excl_zone;
+			} else if (p.second->anchor == (t | b | r)) {
+				area->width -= p.second->excl_zone;
+			}
+		}
+	}
+}
+
 // XXX: keyboard interactivity handling: fine for below-desktop, incomplete for above-desktop
 //
 // When a layer-shell surface gets focus, desktop shell will still think that it was focused,
@@ -400,6 +439,10 @@ static void touch_to_activate_binding(struct weston_touch *touch, const struct t
 
 WL_EXPORT int wet_module_init(struct weston_compositor *ec, int *argc, char *argv[]) {
 	compositor = ec;
+	if ((desk_shell = weston_desktop_shell_get_api(compositor)) == nullptr) {
+		weston_log("layer-shell: did not find desktop-shell api, are you using the correct weston?\n");
+		return -1;
+	}
 	if ((caps = weston_extra_dip_capabilities_get_api(compositor)) == nullptr) {
 		weston_log(
 		    "layer-shell: did not find capabilities api, did you put the capabilities plugin before "
@@ -408,6 +451,7 @@ WL_EXPORT int wet_module_init(struct weston_compositor *ec, int *argc, char *arg
 	}
 	caps->create(caps->get(compositor), "layer-shell");
 	caps->create(caps->get(compositor), "layer-shell-overlay");
+	desk_shell->set_output_work_area_fn(desk_shell->get(compositor), lsh_get_output_work_area);
 	weston_layer_init(&lr_background, compositor);
 	weston_layer_set_position(&lr_background, WESTON_LAYER_POSITION_BACKGROUND);
 	weston_layer_init(&lr_bottom, compositor);
