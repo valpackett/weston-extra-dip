@@ -202,8 +202,11 @@ static void committed_callback(struct weston_surface *surface, int32_t sx, int32
 	}
 	if (ctx->head != nullptr) {
 		ctx->view->output = weston_head_get_output(ctx->head);
+	} else {
+		ctx->view->output = weston_compositor_get_focused_output(surface->compositor);
 	}
 	if (ctx->view->output == nullptr) {
+		weston_log("layer-shell: WTF: no output for surface from focus\n");
 		weston_view_update_transform(ctx->view);  // assigns an output if there was none
 	}
 	if (ctx->view->output == nullptr) {
