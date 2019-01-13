@@ -436,12 +436,123 @@ static void cm_output_set_scale(struct wl_client *client, struct wl_resource *re
 	ctx->send_update_output();
 }
 
+static void cm_device_set_tap_click(struct wl_client *client, struct wl_resource *resource,
+                                    uint32_t seat_idx, uint32_t device_idx, uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_tap_set_enabled(
+		    device->device, !!enable ? LIBINPUT_CONFIG_TAP_ENABLED : LIBINPUT_CONFIG_TAP_DISABLED);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_tap_drag(struct wl_client *client, struct wl_resource *resource,
+                                   uint32_t seat_idx, uint32_t device_idx, uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_tap_set_drag_enabled(
+		    device->device, !!enable ? LIBINPUT_CONFIG_DRAG_ENABLED : LIBINPUT_CONFIG_DRAG_DISABLED);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_drag_lock(struct wl_client *client, struct wl_resource *resource,
+                                    uint32_t seat_idx, uint32_t device_idx, uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_tap_set_drag_lock_enabled(
+		    device->device,
+		    !!enable ? LIBINPUT_CONFIG_DRAG_LOCK_ENABLED : LIBINPUT_CONFIG_DRAG_LOCK_DISABLED);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_send_events_mode(struct wl_client *client, struct wl_resource *resource,
+                                           uint32_t seat_idx, uint32_t device_idx, uint32_t mode) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [mode](const struct evdev_device *device) {
+		libinput_device_config_send_events_set_mode(device->device, mode);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_accel_speed(struct wl_client *client, struct wl_resource *resource,
+                                      uint32_t seat_idx, uint32_t device_idx, wl_fixed_t speed) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [speed](const struct evdev_device *device) {
+		libinput_device_config_accel_set_speed(device->device, wl_fixed_to_double(speed));
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_accel_profile(struct wl_client *client, struct wl_resource *resource,
+                                        uint32_t seat_idx, uint32_t device_idx, uint32_t profile) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [profile](const struct evdev_device *device) {
+		libinput_device_config_accel_set_profile(
+		    device->device, static_cast<enum libinput_config_accel_profile>(profile));
+	});
+	ctx->send_update_inputdevs();
+}
+
 static void cm_device_set_natural_scrolling(struct wl_client *client, struct wl_resource *resource,
                                             uint32_t seat_idx, uint32_t device_idx,
                                             uint32_t enable) {
 	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
 	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
-		libinput_device_config_scroll_set_natural_scroll_enabled(device->device, enable);
+		libinput_device_config_scroll_set_natural_scroll_enabled(device->device, !!enable);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_left_handed_mode(struct wl_client *client, struct wl_resource *resource,
+                                           uint32_t seat_idx, uint32_t device_idx,
+                                           uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_left_handed_set(device->device, !!enable);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_click_method(struct wl_client *client, struct wl_resource *resource,
+                                       uint32_t seat_idx, uint32_t device_idx, uint32_t method) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [method](const struct evdev_device *device) {
+		libinput_device_config_click_set_method(device->device,
+		                                        static_cast<enum libinput_config_click_method>(method));
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_scroll_method(struct wl_client *client, struct wl_resource *resource,
+                                        uint32_t seat_idx, uint32_t device_idx, uint32_t method) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [method](const struct evdev_device *device) {
+		libinput_device_config_scroll_set_method(
+		    device->device, static_cast<enum libinput_config_scroll_method>(method));
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_middle_emulation(struct wl_client *client, struct wl_resource *resource,
+                                           uint32_t seat_idx, uint32_t device_idx,
+                                           uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_middle_emulation_set_enabled(
+		    device->device, !!enable ? LIBINPUT_CONFIG_MIDDLE_EMULATION_ENABLED
+		                             : LIBINPUT_CONFIG_MIDDLE_EMULATION_DISABLED);
+	});
+	ctx->send_update_inputdevs();
+}
+
+static void cm_device_set_dwt(struct wl_client *client, struct wl_resource *resource,
+                              uint32_t seat_idx, uint32_t device_idx, uint32_t enable) {
+	auto *ctx = static_cast<struct cm_context *>(wl_resource_get_user_data(resource));
+	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
+		libinput_device_config_dwt_set_enabled(
+		    device->device, !!enable ? LIBINPUT_CONFIG_DWT_ENABLED : LIBINPUT_CONFIG_DWT_DISABLED);
 	});
 	ctx->send_update_inputdevs();
 }
@@ -454,8 +565,23 @@ static void cm_destructor(struct wl_resource *resource) {
 }
 
 static struct wldip_compositor_manager_interface cm_impl = {
-    cm_subscribe, cm_get, cm_desktop_surface_activate, cm_output_set_scale,
-    cm_device_set_natural_scrolling};
+    cm_subscribe,
+    cm_get,
+    cm_desktop_surface_activate,
+    cm_output_set_scale,
+    cm_device_set_tap_click,
+    cm_device_set_tap_drag,
+    cm_device_set_drag_lock,
+    cm_device_set_send_events_mode,
+    cm_device_set_accel_speed,
+    cm_device_set_accel_profile,
+    cm_device_set_natural_scrolling,
+    cm_device_set_left_handed_mode,
+    cm_device_set_click_method,
+    cm_device_set_scroll_method,
+    cm_device_set_middle_emulation,
+    cm_device_set_dwt,
+};
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
 	struct wl_resource *resource =
