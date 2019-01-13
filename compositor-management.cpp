@@ -417,6 +417,7 @@ static void cm_desktop_surface_activate(struct wl_client *client, struct wl_reso
 			break;
 		}
 	}
+	ctx->send_update_surface();
 }
 
 static void cm_output_set_scale(struct wl_client *client, struct wl_resource *resource,
@@ -432,6 +433,7 @@ static void cm_output_set_scale(struct wl_client *client, struct wl_resource *re
 			break;
 		}
 	}
+	ctx->send_update_output();
 }
 
 static void cm_device_set_natural_scrolling(struct wl_client *client, struct wl_resource *resource,
@@ -441,6 +443,7 @@ static void cm_device_set_natural_scrolling(struct wl_client *client, struct wl_
 	ctx->with_input_device(seat_idx, device_idx, [enable](const struct evdev_device *device) {
 		libinput_device_config_scroll_set_natural_scroll_enabled(device->device, enable);
 	});
+	ctx->send_update_inputdevs();
 }
 
 static void cm_destructor(struct wl_resource *resource) {
