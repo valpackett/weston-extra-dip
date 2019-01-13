@@ -175,6 +175,7 @@ struct cm_context {
 					        libinput_device_config_accel_get_default_profile(device->device)),
 					    static_cast<AccelerationProfile>(
 					        libinput_device_config_accel_get_profile(device->device)),
+					    libinput_device_config_scroll_has_natural_scroll(device->device) != 0,
 					    libinput_device_config_scroll_get_default_natural_scroll_enabled(device->device) != 0,
 					    libinput_device_config_scroll_get_natural_scroll_enabled(device->device) != 0,
 					    libinput_device_config_left_handed_is_available(device->device) != 0,

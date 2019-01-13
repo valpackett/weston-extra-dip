@@ -123,6 +123,7 @@ table InputDevice {
 	acceleration_profile_default: AccelerationProfile;
 	acceleration_profile: AccelerationProfile;
 	natural_scrolling_available: bool;
+	natural_scrolling_default: bool;
 	natural_scrolling: bool;
 	left_handed_mode_available: bool;
 	left_handed_mode_default: bool;
